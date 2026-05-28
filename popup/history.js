@@ -1,9 +1,25 @@
-// history.js — injecteert History tab HTML en beheert notificatiegeschiedenis
+// history.js v1.1.0 — injecteert History tab HTML en beheert notificatiegeschiedenis
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
 function initHistoryTab() {
   document.getElementById('tab-history').innerHTML = `
+
+    <!-- 📊 Statistieken -->
+    <div class="stats-dropdown" id="statsDropdown">
+      <button id="btnToggleStats" class="stats-toggle-btn">
+        <span>📊 Statistics</span>
+        <span id="statsChevron" class="stats-chevron">▼</span>
+      </button>
+      <div id="statsPanel" style="display:none">
+        <div class="stats-panel-inner" id="statsPanelInner">
+          <div class="empty-state" style="padding:12px 0">Loading…</div>
+        </div>
+        <button class="btn-clear-history" id="btnResetStats" style="margin:0 0 10px;width:100%">Reset statistics</button>
+      </div>
+    </div>
+
+    <!-- Notificatiegeschiedenis -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div class="section-label" style="margin:0">Notification history</div>
       <button class="btn-clear-history" id="btnClearHistory">Clear</button>
@@ -47,6 +63,107 @@ function setupHistoryEvents() {
     await chrome.storage.local.set({ caughtAircraft: [], caughtAircraftLabels: {} });
     renderCaughtList();
   });
+
+  document.getElementById('btnToggleStats').addEventListener('click', () => {
+    const panel   = document.getElementById('statsPanel');
+    const chevron = document.getElementById('statsChevron');
+    const isOpen  = panel.style.display !== 'none';
+    panel.style.display     = isOpen ? 'none' : 'block';
+    chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    if (!isOpen) renderStats();
+  });
+
+  document.getElementById('btnResetStats').addEventListener('click', async () => {
+    const btn = document.getElementById('btnResetStats');
+    if (btn.dataset.confirm !== '1') {
+      btn.dataset.confirm = '1';
+      btn.textContent = 'Sure? Click again to confirm';
+      btn.style.color = '#ef4444';
+      btn.style.borderColor = '#ef4444';
+      setTimeout(() => {
+        btn.dataset.confirm = '';
+        btn.textContent = 'Reset statistics';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }, 2500);
+      return;
+    }
+    await chrome.storage.local.remove([
+      'statsTotalCount', 'statsTypeCounts', 'statsAirlineCounts'
+    ]);
+    btn.dataset.confirm = '';
+    btn.textContent = 'Reset statistics';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    renderStats();
+  });
+}
+
+// ─── STATISTIEKEN RENDEREN ─────────────────────────────────────────────────
+
+async function renderStats() {
+  const container = document.getElementById('statsPanelInner');
+  if (!container) return;
+
+  const { statsTotalCount = 0, statsFirstDetection, statsTypeCounts = {}, statsAirlineCounts = {} } =
+    await chrome.storage.local.get(['statsTotalCount', 'statsFirstDetection', 'statsTypeCounts', 'statsAirlineCounts']);
+
+  if (statsTotalCount === 0 && !statsFirstDetection) {
+    container.innerHTML = '<div style="font-family:Space Mono,monospace;font-size:10px;color:#4b5680;padding:4px 0 10px">No data yet. Stats are recorded as notifications fire.</div>';
+    return;
+  }
+
+  function topN(obj, n) {
+    return Object.entries(obj)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, n);
+  }
+
+  const topTypes    = topN(statsTypeCounts, 5);
+  const topAirlines = topN(statsAirlineCounts, 5);
+
+  const firstDate = statsFirstDetection
+    ? new Date(statsFirstDetection).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })
+    : '—';
+
+  function barRow(label, count, max) {
+    const pct = max > 0 ? Math.round((count / max) * 100) : 0;
+    return `
+      <div class="stats-bar-row">
+        <span class="stats-bar-label">${label}</span>
+        <div class="stats-bar-track">
+          <div class="stats-bar-fill" style="width:${pct}%"></div>
+        </div>
+        <span class="stats-bar-count">${count}</span>
+      </div>
+    `;
+  }
+
+  const maxType    = topTypes[0]?.[1]    || 1;
+  const maxAirline = topAirlines[0]?.[1] || 1;
+
+  container.innerHTML = `
+    <div class="stats-meta-row">
+      <div class="stats-meta-cell">
+        <div class="stats-meta-label">Total notifications</div>
+        <div class="stats-meta-value">${statsTotalCount}</div>
+      </div>
+      <div class="stats-meta-cell">
+        <div class="stats-meta-label">First detection</div>
+        <div class="stats-meta-value" style="font-size:11px">${firstDate}</div>
+      </div>
+    </div>
+
+    ${topTypes.length > 0 ? `
+      <div class="stats-section-label">Top aircraft types</div>
+      ${topTypes.map(([t, c]) => barRow(t, c, maxType)).join('')}
+    ` : ''}
+
+    ${topAirlines.length > 0 ? `
+      <div class="stats-section-label" style="margin-top:10px">Top airlines</div>
+      ${topAirlines.map(([a, c]) => barRow(a, c, maxAirline)).join('')}
+    ` : ''}
+  `;
 }
 
 async function renderCaughtList() {

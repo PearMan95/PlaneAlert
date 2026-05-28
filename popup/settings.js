@@ -517,7 +517,8 @@ async function initSettings() {
     'hideGround', 'notificationsEnabled', 'notifShow',
     'alertSound', 'alertVolume',
     'startupTab', 'lastTab',
-    'caughtAircraft', 'caughtAircraftLabels'
+    'caughtAircraft', 'caughtAircraftLabels',
+    'statsTotalCount', 'statsFirstDetection', 'statsTypeCounts', 'statsAirlineCounts'
   ];
 
   document.getElementById('btnExportAlerts').addEventListener('click', async () => {
