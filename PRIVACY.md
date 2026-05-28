@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: March 18, 2026**
+**Last updated: May 29, 2026**
 
 ## Overview
 
@@ -15,6 +15,7 @@ Plane Alert collects and stores the following data locally on your device:
 - **Notification preferences** — your notification and sound settings.
 - **Caught aircraft** — ICAO hex addresses of aircraft you have marked as caught.
 - **Notification history** — a local log of triggered alerts (callsign, timestamp, flight details).
+- **Statistics** — all-time counters derived from triggered notifications: total notification count, date of first detection, aircraft type counts, and airline prefix counts. These are stored locally and can be reset at any time via the History tab.
 
 ## How Your Data Is Used
 
@@ -34,7 +35,7 @@ We do not sell, trade, or share any of your data with third parties.
 
 ## Data Deletion
 
-You can delete all locally stored data at any time by removing the extension from Chrome, or by using the "Export backup" feature and clearing your settings manually.
+You can delete all locally stored data at any time by removing the extension from Chrome, or by using the "Export backup" feature and clearing your settings manually. Statistics can be reset independently via the History tab.
 
 ## Changes to This Policy
 
