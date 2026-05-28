@@ -1212,16 +1212,13 @@ input::placeholder { color: #3a4560; }
   cursor: default;
 }
 
-/* ── Statistics dropdown ── */
-/* Voeg toe aan het einde van popup.css */
-
 .stats-dropdown {
   border: 1px solid #1a2a4a;
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 14px;
 }
-
+ 
 .stats-toggle-btn {
   width: 100%;
   display: flex;
@@ -1235,34 +1232,34 @@ input::placeholder { color: #3a4560; }
   font-family: 'Space Mono', monospace;
   font-size: 11px;
 }
-
+ 
 .stats-toggle-btn:hover { background: #101a38; }
-
+ 
 .stats-chevron {
   font-size: 10px;
   transition: transform 0.2s;
   color: #5a6a90;
 }
-
+ 
 .stats-panel-inner {
   padding: 10px 12px 4px;
   background: #080f25;
 }
-
+ 
 .stats-meta-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-bottom: 12px;
 }
-
+ 
 .stats-meta-cell {
   background: #0f1322;
   border: 1px solid #1e2840;
   border-radius: 6px;
   padding: 8px 10px;
 }
-
+ 
 .stats-meta-label {
   font-family: 'Space Mono', monospace;
   font-size: 9px;
@@ -1271,14 +1268,14 @@ input::placeholder { color: #3a4560; }
   color: #5a6a90;
   margin-bottom: 4px;
 }
-
+ 
 .stats-meta-value {
   font-family: 'Space Mono', monospace;
   font-size: 15px;
   font-weight: 700;
   color: #60a5fa;
 }
-
+ 
 .stats-section-label {
   font-family: 'Space Mono', monospace;
   font-size: 9px;
@@ -1287,14 +1284,14 @@ input::placeholder { color: #3a4560; }
   color: #5a6a90;
   margin-bottom: 6px;
 }
-
+ 
 .stats-bar-row {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 5px;
 }
-
+ 
 .stats-bar-label {
   font-family: 'Space Mono', monospace;
   font-size: 10px;
@@ -1302,7 +1299,7 @@ input::placeholder { color: #3a4560; }
   width: 44px;
   flex-shrink: 0;
 }
-
+ 
 .stats-bar-track {
   flex: 1;
   height: 5px;
@@ -1310,14 +1307,14 @@ input::placeholder { color: #3a4560; }
   border-radius: 3px;
   overflow: hidden;
 }
-
+ 
 .stats-bar-fill {
   height: 100%;
   background: #2a5aaa;
   border-radius: 3px;
   transition: width 0.3s ease;
 }
-
+ 
 .stats-bar-count {
   font-family: 'Space Mono', monospace;
   font-size: 10px;
@@ -1325,4 +1322,10 @@ input::placeholder { color: #3a4560; }
   width: 24px;
   text-align: right;
   flex-shrink: 0;
+}
+ 
+/* Reset-knop krijgt zelfde zijpadding als stats-panel-inner */
+#btnResetStats {
+  margin: 0 12px 10px;
+  width: calc(100% - 24px);
 }

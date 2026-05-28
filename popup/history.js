@@ -1,4 +1,4 @@
-// history.js v1.1.0 — injecteert History tab HTML en beheert notificatiegeschiedenis
+// history.js v1.1.1 — injecteert History tab HTML en beheert notificatiegeschiedenis
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ function initHistoryTab() {
         <div class="stats-panel-inner" id="statsPanelInner">
           <div class="empty-state" style="padding:12px 0">Loading…</div>
         </div>
-        <button class="btn-clear-history" id="btnResetStats" style="margin:0 0 10px;width:100%">Reset statistics</button>
+        <button class="btn-clear-history" id="btnResetStats" style="width:100%">Reset statistics</button>
       </div>
     </div>
 
@@ -109,7 +109,7 @@ async function renderStats() {
     await chrome.storage.local.get(['statsTotalCount', 'statsFirstDetection', 'statsTypeCounts', 'statsAirlineCounts']);
 
   if (statsTotalCount === 0 && !statsFirstDetection) {
-    container.innerHTML = '<div style="font-family:Space Mono,monospace;font-size:10px;color:#4b5680;padding:4px 0 10px">No data yet. Stats are recorded as notifications fire.</div>';
+    container.innerHTML = '<div style="font-family:Space Mono,monospace;font-size:10px;color:#8b9cc8;padding:4px 0 10px">No data yet. Stats are recorded once notifications start firing.</div>';
     return;
   }
 
