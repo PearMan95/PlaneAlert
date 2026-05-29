@@ -1329,3 +1329,52 @@ input::placeholder { color: #3a4560; }
   margin: 0 12px 10px;
   width: calc(100% - 24px);
 }
+
+/* ── Notificatie OS-preview ── */
+/* Vervangt .notif-builder-preview / .notif-preview-title / .notif-preview-body */
+
+.notif-os-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #1c2033;
+  border: 1px solid #2a3a5a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.notif-os-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.notif-os-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-os-preview .notif-preview-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e8e4f0;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notif-os-preview .notif-preview-body {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: #8b9cc8;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
