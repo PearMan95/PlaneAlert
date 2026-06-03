@@ -1,4 +1,4 @@
-// live.js v1.1.0 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
+// live.js v1.2.0 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -41,9 +41,7 @@ function initLiveTab() {
         <span class="alt-value" id="minAltValue">0 m</span>
       </div>
     </div>
-    <div class="ac-list" id="acList">
-      <div class="empty-state">Press refresh to load aircraft.</div>
-    </div>
+    <div class="ac-list" id="acList"></div>
   `;
   setupLiveEvents();
 }
@@ -233,8 +231,6 @@ function setupLiveEvents() {
 
 // ─── BELL BUTTON HELPER ────────────────────────────────────────────────────
 
-// Maakt een bell-knop aan voor een alert-type/waarde combinatie.
-// Grijs + doorgestreept = geen alert actief. Groen = alert bestaat. Klik togglet.
 async function createBellBtn(type, value) {
   if (!value) return null;
 
@@ -279,7 +275,6 @@ async function createBellBtn(type, value) {
     await chrome.storage.local.set({ alerts });
     await syncState();
 
-    // Alerts tab direct bijwerken
     if (typeof renderAlerts === 'function') {
       renderAlerts(alerts);
     }
@@ -356,7 +351,9 @@ async function renderAircraftList() {
   matchEl.textContent = aircraft.filter(isMatch).length;
 
   if (aircraft.length === 0) {
-    list.innerHTML = '<div class="empty-state">No aircraft match the current filters.</div>';
+    list.innerHTML = lastAcData.length === 0
+      ? '<div class="empty-state">Press refresh to load aircraft.</div>'
+      : '<div class="empty-state">No aircraft match the current filters.</div>';
     currentDetailHex = null;
     return;
   }
@@ -435,7 +432,6 @@ async function renderAircraftList() {
 // ─── DROPDOWN CONTENT ──────────────────────────────────────────────────────
 
 async function buildDropdownContent(dropdown, ac, units, caught) {
-  // Cellen met optionele bell-knop (bell: null = geen knop)
   const cellDefs = [
     { label: 'Registration', val: ac.r || '—',    bell: { type: 'registration', value: ac.r } },
     { label: 'Type',         val: ac.t || '—',    bell: { type: 'type',         value: ac.t } },
@@ -466,7 +462,6 @@ async function buildDropdownContent(dropdown, ac, units, caught) {
     valEl.textContent = def.val;
     valRow.appendChild(valEl);
 
-    // Voeg bell-knop toe als het veld een waarde heeft
     if (def.bell && def.bell.value) {
       const bellBtn = await createBellBtn(def.bell.type, def.bell.value);
       if (bellBtn) valRow.appendChild(bellBtn);
