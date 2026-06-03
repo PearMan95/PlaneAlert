@@ -1,4 +1,4 @@
-// history.js v1.1.1 — injecteert History tab HTML en beheert notificatiegeschiedenis
+// history.js v1.2.0 — injecteert History tab HTML en beheert notificatiegeschiedenis
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -60,6 +60,26 @@ function setupHistoryEvents() {
   });
 
   document.getElementById('btnClearCaught').addEventListener('click', async () => {
+    const btn = document.getElementById('btnClearCaught');
+    if (btn.dataset.confirm !== '1') {
+      btn.dataset.confirm = '1';
+      btn.textContent = 'Sure? Click again to confirm';
+      btn.style.color = '#ef4444';
+      btn.style.borderColor = '#ef4444';
+      setTimeout(() => {
+        if (btn.dataset.confirm === '1') {
+          btn.dataset.confirm = '';
+          btn.textContent = 'Release all';
+          btn.style.color = '';
+          btn.style.borderColor = '';
+        }
+      }, 2500);
+      return;
+    }
+    btn.dataset.confirm = '';
+    btn.textContent = 'Release all';
+    btn.style.color = '';
+    btn.style.borderColor = '';
     await chrome.storage.local.set({ caughtAircraft: [], caughtAircraftLabels: {} });
     renderCaughtList();
   });

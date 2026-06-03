@@ -1,4 +1,5 @@
-// settings.js v1.1.0 — injecteert Settings tab HTML en beheert alle instellingen
+// settings.js v1.2.0 — injecteert Settings tab HTML en beheert alle instellingen
+// showSaved() is beschikbaar via popup.js
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -182,17 +183,6 @@ function initSettingsTab() {
   setupSettingsEvents();
 }
 
-// ─── SAVED TOAST ───────────────────────────────────────────────────────────
-
-let toastTimer = null;
-function showSaved(label = 'Saved') {
-  const toast = document.getElementById('savedToast');
-  toast.textContent = `✓ ${label}`;
-  toast.classList.add('visible');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('visible'), 1800);
-}
-
 // ─── LOCATIE ───────────────────────────────────────────────────────────────
 
 function updateCoordDisplay(lat, lon) {
@@ -341,7 +331,6 @@ function setupSettingsEvents() {
 // ─── INSTELLINGEN HERLADEN (na backup import) ──────────────────────────────
 
 async function loadSettings() {
-  // Onthoud welke kaarten open waren voor we de HTML herinjekten
   const openCards = [];
   document.querySelectorAll('.settings-card-body').forEach(body => {
     if (body.style.display !== 'none') openCards.push(body.id);
@@ -355,7 +344,6 @@ async function loadSettings() {
   initRadiusButtons(radius, units);
   await initSettings();
 
-  // Herstel open kaarten
   openCards.forEach(id => {
     const body = document.getElementById(id);
     if (body) {

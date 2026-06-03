@@ -1,4 +1,4 @@
-// alerts.js — injecteert Alerts tab HTML en beheert alert logica
+// alerts.js v1.1.0 — injecteert Alerts tab HTML en beheert alert logica
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -108,6 +108,7 @@ function setupAlertsEvents() {
     document.getElementById('alertValue').value = '';
     document.getElementById('alertNote').value  = '';
     renderAlerts(alerts);
+    showSaved('Alert added');
   });
 }
 
@@ -145,7 +146,7 @@ async function renderAlerts(alerts) {
   list.querySelectorAll('.alert-note').forEach(el => {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (el.querySelector('input')) return; // al in edit mode
+      if (el.querySelector('input')) return;
 
       const id          = el.dataset.id;
       const currentNote = el.textContent.trim() === '+ add note' ? '' : el.textContent.trim();

@@ -1,4 +1,16 @@
-// popup.js — init, tab switching, help overlay, master toggle, status
+// popup.js v1.1.0 — init, tab switching, help overlay, master toggle, status
+
+// ─── TOAST (gedeeld door alle popup-scripts) ───────────────────────────────
+
+let toastTimer = null;
+function showSaved(label = 'Saved') {
+  const toast = document.getElementById('savedToast');
+  if (!toast) return;
+  toast.textContent = `✓ ${label}`;
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 1800);
+}
 
 // ─── TAB SWITCHING ─────────────────────────────────────────────────────────
 
