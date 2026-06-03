@@ -2,7 +2,7 @@
 
 A Chrome extension that notifies you when a tracked aircraft enters your radius — powered by the [airplanes.live](https://airplanes.live) API.
 
-![Version](https://img.shields.io/badge/version-1.4.0-blue)
+![Version](https://img.shields.io/badge/version-1.5.0-blue)
 ![Manifest](https://img.shields.io/badge/manifest-v3-green)
 ![License](https://img.shields.io/badge/license-GPL%20v3-lightgrey)
 
@@ -15,7 +15,7 @@ A Chrome extension that notifies you when a tracked aircraft enters your radius 
 - **Catch aircraft** — mark an aircraft as caught directly from the notification or the Live tab detail panel. Caught aircraft won't trigger future notifications. Manage your caught list in the History tab.
 - **Alert sound** — choose from Ping, Radar, Alert or Chime with adjustable volume (soft, medium, loud)
 - **Live tab** — see all aircraft in your radius in real time, with sorting and filtering options
-- **Detail dropdown** — click any aircraft to expand its details inline: registration, type, altitude, speed, route, squawk and heading
+- **Detail dropdown** — click any aircraft to expand its details inline: registration, type, altitude, speed, route, squawk and heading. Use the 🔔/🔕 bell buttons to toggle alerts for that registration or type directly from the dropdown.
 - **Notification history** — a log of every triggered alert with callsign, time and flight details
 - **Settings** — organised into collapsible cards: Location, Filters, Units, Notifications, Startup tab, and Backup & Test
 - **Startup tab** — choose which tab opens on launch, or always return to the last tab you were on
@@ -60,18 +60,32 @@ Plane Alert polls the airplanes.live API in the background every minute. When an
 
 ---
 
+## Data & privacy
+
+All data is stored locally on your device. The only external call is to the airplanes.live API, which receives your approximate location and radius with each poll.
+
+**What is included in a backup export:** alerts, location, radius, units, notification preferences, sound settings, startup tab, caught aircraft, and statistics.
+
+**What is intentionally excluded from backups:** notification history (`notifHistory`). This log is ephemeral by design — it reflects what happened on your device and is not meaningful to restore on another machine or after a reinstall.
+
+See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
+
+---
+
 ## File structure
 
 ```
 plane-alert/
 ├── manifest.json
 ├── background.js       — background service worker, polling & notifications
+├── shared.js           — shared match logic (used by background & popup)
 ├── offscreen.html      — offscreen document for audio playback
 ├── offscreen.js        — Web Audio API sound engine
 ├── icons/
 │   ├── icon16.png
 │   ├── icon48.png
-│   └── icon128.png
+│   ├── icon128.png
+│   └── airplanes-live-logo.png
 └── popup/
     ├── popup.html      — extension UI skeleton
     ├── popup.css       — all styles
