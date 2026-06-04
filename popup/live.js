@@ -1,4 +1,4 @@
-// live.js v1.2.0 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
+// live.js v1.3.0 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -61,6 +61,7 @@ let searchQuery          = '';
 let liveSettingsCache    = null;
 let autoRefreshTimer     = null;
 let autoRefreshCountdown = null;
+let renderDebounceTimer  = null;
 
 // ─── AUTO-REFRESH ──────────────────────────────────────────────────────────
 
@@ -212,6 +213,9 @@ function setupLiveEvents() {
     renderAircraftList();
   });
 
+  // ── Gedebouncede storage listener ──────────────────────────────────────
+  // Voorkomt dat snelle opeenvolgende changes (bijv. unit-wissel) meerdere
+  // renders triggeren. Cache wordt direct geïnvalideerd; render wacht 50ms.
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     if (!changes.units && !changes.hideGround && !changes.alerts && !changes.caughtAircraft) return;
@@ -225,7 +229,9 @@ function setupLiveEvents() {
     }
 
     liveSettingsCache = null;
-    renderAircraftList();
+
+    clearTimeout(renderDebounceTimer);
+    renderDebounceTimer = setTimeout(() => renderAircraftList(), 50);
   });
 }
 
@@ -394,7 +400,7 @@ async function renderAircraftList() {
     dropdown.className = `ac-dropdown${isOpen ? ' open' : ''}`;
 
     if (isOpen) {
-      await buildDropdownContent(dropdown, ac, units, caught);
+      await buildDropdownContent(dropdown, ac, units);
     }
 
     item.addEventListener('click', async () => {
@@ -418,7 +424,7 @@ async function renderAircraftList() {
         item.classList.add('open');
         item.querySelector('.ac-chevron').textContent = '▲';
         dropdown.classList.add('open');
-        await buildDropdownContent(dropdown, ac, units, caught);
+        await buildDropdownContent(dropdown, ac, units);
         wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     });
@@ -431,7 +437,12 @@ async function renderAircraftList() {
 
 // ─── DROPDOWN CONTENT ──────────────────────────────────────────────────────
 
-async function buildDropdownContent(dropdown, ac, units, caught) {
+// Storage reads samengevoegd tot één call bovenaan de functie.
+// De catch-knop hergebruikt dezelfde data en doet geen losse get meer.
+async function buildDropdownContent(dropdown, ac, units) {
+  const { caughtAircraft: caughtList = [], caughtAircraftLabels: labels = {} } =
+    await chrome.storage.local.get(['caughtAircraft', 'caughtAircraftLabels']);
+
   const cellDefs = [
     { label: 'Registration', val: ac.r || '—',    bell: { type: 'registration', value: ac.r } },
     { label: 'Type',         val: ac.t || '—',    bell: { type: 'type',         value: ac.t } },
@@ -483,27 +494,23 @@ async function buildDropdownContent(dropdown, ac, units, caught) {
   const catchBtn = document.createElement('button');
   catchBtn.className = 'detail-catch-btn';
 
-  async function updateCatchBtn() {
-    const { caughtAircraft: current = [] } = await chrome.storage.local.get('caughtAircraft');
-    const isCaughtNow = current.includes(ac.hex);
-    catchBtn.textContent = isCaughtNow ? '↩️ Release this aircraft' : '🎯 Catch this aircraft';
-  }
-
-  await updateCatchBtn();
+  // Gebruik de al opgehaalde caughtList -- geen extra storage read nodig
+  const isCaughtNow = caughtList.includes(ac.hex);
+  catchBtn.textContent = isCaughtNow ? '↩️ Release this aircraft' : '🎯 Catch this aircraft';
 
   catchBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    const { caughtAircraft: current = [], caughtAircraftLabels: labels = {} } =
+    const { caughtAircraft: current = [], caughtAircraftLabels: currentLabels = {} } =
       await chrome.storage.local.get(['caughtAircraft', 'caughtAircraftLabels']);
     const idx = current.indexOf(ac.hex);
     if (idx === -1) {
       current.push(ac.hex);
-      labels[ac.hex] = buildCaughtLabel(ac);
+      currentLabels[ac.hex] = buildCaughtLabel(ac);
     } else {
       current.splice(idx, 1);
-      delete labels[ac.hex];
+      delete currentLabels[ac.hex];
     }
-    await chrome.storage.local.set({ caughtAircraft: current, caughtAircraftLabels: labels });
+    await chrome.storage.local.set({ caughtAircraft: current, caughtAircraftLabels: currentLabels });
     currentDetailHex = null;
     renderAircraftList();
   });
