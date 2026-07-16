@@ -62,6 +62,19 @@ const placeholders = {
 
 // ─── EVENTS ────────────────────────────────────────────────────────────────
 
+function setNoteDisplay(el, noteText) {
+  el.innerHTML = '';
+  el.dataset.note = noteText || '';
+  if (noteText) {
+    el.textContent = noteText;
+  } else {
+    const emptySpan = document.createElement('span');
+    emptySpan.className = 'alert-note-empty';
+    emptySpan.textContent = '+ add note';
+    el.appendChild(emptySpan);
+  }
+}
+
 function setupAlertsEvents() {
 
   document.getElementById('alertType').addEventListener('change', (e) => {
@@ -130,15 +143,40 @@ async function renderAlerts(alerts) {
   for (const alert of alerts) {
     const item = document.createElement('div');
     item.className = 'alert-item';
-    item.innerHTML = `
-      <button class="alert-toggle ${alert.active ? 'on' : ''}" data-id="${alert.id}"></button>
-      <div class="alert-info">
-        <div class="alert-value">${alert.type === 'dbflag' ? (flagLabels[alert.value] || alert.value) : alert.value}</div>
-        <div class="alert-type-label">${typeLabels[alert.type] || alert.type}</div>
-        <div class="alert-note" data-id="${alert.id}" title="Click to edit note">${alert.note || '<span class="alert-note-empty">+ add note</span>'}</div>
-      </div>
-      <button class="btn-remove" data-id="${alert.id}">X</button>
-    `;
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = `alert-toggle ${alert.active ? 'on' : ''}`;
+    toggleBtn.dataset.id = alert.id;
+
+    const info = document.createElement('div');
+    info.className = 'alert-info';
+
+    const valueDiv = document.createElement('div');
+    valueDiv.className = 'alert-value';
+    valueDiv.textContent = alert.type === 'dbflag' ? (flagLabels[alert.value] || alert.value) : alert.value;
+
+    const typeDiv = document.createElement('div');
+    typeDiv.className = 'alert-type-label';
+    typeDiv.textContent = typeLabels[alert.type] || alert.type;
+
+    const noteDiv = document.createElement('div');
+    noteDiv.className = 'alert-note';
+    noteDiv.dataset.id = alert.id;
+    noteDiv.title = 'Click to edit note';
+    setNoteDisplay(noteDiv, alert.note);
+
+    info.appendChild(valueDiv);
+    info.appendChild(typeDiv);
+    info.appendChild(noteDiv);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn-remove';
+    removeBtn.dataset.id = alert.id;
+    removeBtn.textContent = 'X';
+
+    item.appendChild(toggleBtn);
+    item.appendChild(info);
+    item.appendChild(removeBtn);
     list.appendChild(item);
   }
 
@@ -149,7 +187,7 @@ async function renderAlerts(alerts) {
       if (el.querySelector('input')) return;
 
       const id          = el.dataset.id;
-      const currentNote = el.textContent.trim() === '+ add note' ? '' : el.textContent.trim();
+      const currentNote = el.dataset.note || '';
 
       const input = document.createElement('input');
       input.type        = 'text';
@@ -170,15 +208,13 @@ async function renderAlerts(alerts) {
           alert.note = newNote;
           await chrome.storage.local.set({ alerts });
         }
-        el.innerHTML = newNote
-          ? newNote
-          : '<span class="alert-note-empty">+ add note</span>';
+        setNoteDisplay(el, newNote);
       }
 
       input.addEventListener('blur', saveNote);
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter')  { input.blur(); }
-        if (e.key === 'Escape') { el.innerHTML = currentNote || '<span class="alert-note-empty">+ add note</span>'; }
+        if (e.key === 'Escape') { setNoteDisplay(el, currentNote); }
       });
     });
   });

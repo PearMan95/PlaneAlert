@@ -1,4 +1,4 @@
-// live.js v1.3.0 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
+// live.js v1.3.1 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -384,17 +384,58 @@ async function renderAircraftList() {
 
     const item = document.createElement('div');
     item.className = `ac-item${match ? ' match' : ''}${isOpen ? ' open' : ''}`;
-    item.innerHTML = `
-      <div style="min-width:0">
-        <div class="ac-flight">${flight}${match ? '<span class="match-badge">MATCH</span>' : ''}${caught ? '<span class="caught-badge">CAUGHT</span>' : ''}</div>
-        <div class="ac-detail">${route}</div>
-        ${dist ? `<div class="ac-distance">${dist}</div>` : ''}
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="ac-altitude">${altitude}</div>
-        <span class="ac-chevron">${isOpen ? '▲' : '▼'}</span>
-      </div>
-    `;
+
+    // ── Linker kolom: flight, route, distance ──
+    const leftDiv = document.createElement('div');
+    leftDiv.style.minWidth = '0';
+
+    const flightDiv = document.createElement('div');
+    flightDiv.className = 'ac-flight';
+    flightDiv.appendChild(document.createTextNode(flight));
+    if (match) {
+      const matchBadge = document.createElement('span');
+      matchBadge.className = 'match-badge';
+      matchBadge.textContent = 'MATCH';
+      flightDiv.appendChild(matchBadge);
+    }
+    if (caught) {
+      const caughtBadge = document.createElement('span');
+      caughtBadge.className = 'caught-badge';
+      caughtBadge.textContent = 'CAUGHT';
+      flightDiv.appendChild(caughtBadge);
+    }
+
+    const detailDiv = document.createElement('div');
+    detailDiv.className = 'ac-detail';
+    detailDiv.textContent = route;
+
+    leftDiv.appendChild(flightDiv);
+    leftDiv.appendChild(detailDiv);
+
+    if (dist) {
+      const distDiv = document.createElement('div');
+      distDiv.className = 'ac-distance';
+      distDiv.textContent = dist;
+      leftDiv.appendChild(distDiv);
+    }
+
+    // ── Rechter kolom: altitude, chevron ──
+    const rightDiv = document.createElement('div');
+    rightDiv.style.cssText = 'display:flex;align-items:center;gap:8px';
+
+    const altDiv = document.createElement('div');
+    altDiv.className = 'ac-altitude';
+    altDiv.textContent = altitude;
+
+    const chevronSpan = document.createElement('span');
+    chevronSpan.className = 'ac-chevron';
+    chevronSpan.textContent = isOpen ? '▲' : '▼';
+
+    rightDiv.appendChild(altDiv);
+    rightDiv.appendChild(chevronSpan);
+
+    item.appendChild(leftDiv);
+    item.appendChild(rightDiv);
 
     const dropdown = document.createElement('div');
     dropdown.className = `ac-dropdown${isOpen ? ' open' : ''}`;
@@ -488,7 +529,7 @@ async function buildDropdownContent(dropdown, ac, units) {
   mapBtn.textContent = '🗺️ Open on map';
   mapBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    chrome.tabs.create({ url: `https://globe.airplanes.live/?icao=${ac.hex}` });
+    chrome.tabs.create({ url: `https://globe.airplanes.live/?icao=${encodeURIComponent(ac.hex)}` });
   });
 
   const catchBtn = document.createElement('button');

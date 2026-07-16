@@ -1,4 +1,4 @@
-// history.js v1.2.0 — injecteert History tab HTML en beheert notificatiegeschiedenis
+// history.js v1.2.1 — injecteert History tab HTML en beheert notificatiegeschiedenis
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -201,14 +201,31 @@ async function renderCaughtList() {
     const label = caughtAircraftLabels[hex] || hex;
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1a2040;gap:8px';
-    row.innerHTML = `
-      <div style="min-width:0">
-        <div style="font-family:'Space Mono',monospace;font-size:11px;color:#c8d4f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
-        ${label !== hex ? `<div style="font-family:'Space Mono',monospace;font-size:9px;color:#3a4560">${hex}</div>` : ''}
-      </div>
-      <button style="flex-shrink:0;background:none;border:1px solid #2a3060;color:#4b5680;font-size:10px;padding:2px 8px;border-radius:5px;cursor:pointer" data-hex="${hex}">↩️ Release</button>
-    `;
-    row.querySelector('button').addEventListener('click', async () => {
+
+    const infoDiv = document.createElement('div');
+    infoDiv.style.minWidth = '0';
+
+    const labelDiv = document.createElement('div');
+    labelDiv.style.cssText = "font-family:'Space Mono',monospace;font-size:11px;color:#c8d4f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+    labelDiv.textContent = label;
+    infoDiv.appendChild(labelDiv);
+
+    if (label !== hex) {
+      const hexDiv = document.createElement('div');
+      hexDiv.style.cssText = "font-family:'Space Mono',monospace;font-size:9px;color:#3a4560";
+      hexDiv.textContent = hex;
+      infoDiv.appendChild(hexDiv);
+    }
+
+    const releaseBtn = document.createElement('button');
+    releaseBtn.style.cssText = 'flex-shrink:0;background:none;border:1px solid #2a3060;color:#4b5680;font-size:10px;padding:2px 8px;border-radius:5px;cursor:pointer';
+    releaseBtn.dataset.hex = hex;
+    releaseBtn.textContent = '↩️ Release';
+
+    row.appendChild(infoDiv);
+    row.appendChild(releaseBtn);
+
+    releaseBtn.addEventListener('click', async () => {
       const { caughtAircraft: current = [], caughtAircraftLabels: labels = {} } =
         await chrome.storage.local.get(['caughtAircraft', 'caughtAircraftLabels']);
       delete labels[hex];
@@ -240,18 +257,33 @@ async function loadHistory() {
     const time     = new Date(entry.ts);
     const timeStr  = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const dateStr  = time.toLocaleDateString([], { day: '2-digit', month: 'short' });
-    item.innerHTML = `
-      <div class="history-item-top">
-        <span class="history-callsign">${entry.callsign}</span>
-        <span class="history-time">${dateStr} ${timeStr}</span>
-      </div>
-      <div class="history-detail">${entry.detail}</div>
-    `;
+
+    const topRow = document.createElement('div');
+    topRow.className = 'history-item-top';
+
+    const callsignSpan = document.createElement('span');
+    callsignSpan.className = 'history-callsign';
+    callsignSpan.textContent = entry.callsign;
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'history-time';
+    timeSpan.textContent = `${dateStr} ${timeStr}`;
+
+    topRow.appendChild(callsignSpan);
+    topRow.appendChild(timeSpan);
+
+    const detailDiv = document.createElement('div');
+    detailDiv.className = 'history-detail';
+    detailDiv.textContent = entry.detail;
+
+    item.appendChild(topRow);
+    item.appendChild(detailDiv);
+
     if (entry.hex) {
       item.style.cursor = 'pointer';
       item.title = 'Open on map';
       item.addEventListener('click', () => {
-        chrome.tabs.create({ url: `https://globe.airplanes.live/?icao=${entry.hex}` });
+        chrome.tabs.create({ url: `https://globe.airplanes.live/?icao=${encodeURIComponent(entry.hex)}` });
       });
     }
     list.appendChild(item);
