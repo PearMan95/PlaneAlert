@@ -211,7 +211,7 @@ chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
   if (btnIdx === 0) {
     const hexParts = notifId.split('_');
     const hex = hexParts.length >= 3 ? hexParts[1] : '';
-    chrome.tabs.create({ url: `https://globe.airplanes.live${hex ? `/?icao=${hex}` : ''}` });
+    chrome.tabs.create({ url: `https://globe.airplanes.live${hex ? `/?icao=${encodeURIComponent(hex)}` : ''}` });
   }
   if (btnIdx === 1) {
     const parts = notifId.split('_');
