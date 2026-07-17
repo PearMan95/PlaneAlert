@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Plane Alert",
   "description": "Get notified when a tracked aircraft enters your area",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "homepage_url": "https://github.com/PearMan95/plane-alert",
   "permissions": [
     "storage",
@@ -14,6 +14,9 @@
   "host_permissions": [
     "https://api.airplanes.live/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self'; style-src 'self' 'unsafe-inline'"
+  },
   "background": {
     "service_worker": "background.js"
   },
