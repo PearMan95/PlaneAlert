@@ -1,5 +1,7 @@
-// live.js v1.3.2 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
-// v1.3.2: lijstweergave respecteert nu notifShow.reg (registratie i.p.v. callsign)
+// live.js v1.4.0 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
+// v1.4.0: hideGround-instelling weggehaald. "In range" en "Airborne" zijn nu losse tiles die
+//         altijd de volledige data tonen; alleen de "Airborne only" knop filtert de lijst zelf.
+// v1.3.2: lijstweergave respecteert notifShow.reg (registratie i.p.v. callsign)
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -13,6 +15,10 @@ function initLiveTab() {
       <div class="stat-card">
         <div class="label">In range</div>
         <div class="value" id="liveCount">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Airborne</div>
+        <div class="value" id="liveAirborne">—</div>
       </div>
       <div class="stat-card">
         <div class="label">Matching</div>
@@ -219,7 +225,7 @@ function setupLiveEvents() {
   // renders triggeren. Cache wordt direct geïnvalideerd; render wacht 50ms.
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (!changes.units && !changes.hideGround && !changes.alerts && !changes.caughtAircraft && !changes.notifShow) return;
+    if (!changes.units && !changes.alerts && !changes.caughtAircraft && !changes.notifShow) return;
 
     if (changes.units) {
       const newUnits = changes.units.newValue || 'metric';
@@ -294,15 +300,16 @@ async function createBellBtn(type, value) {
 
 async function renderAircraftList() {
   if (!liveSettingsCache) {
-    const data = await chrome.storage.local.get(['lat', 'lon', 'hideGround', 'alerts', 'caughtAircraft', 'units', 'notifShow']);
+    const data = await chrome.storage.local.get(['lat', 'lon', 'alerts', 'caughtAircraft', 'units', 'notifShow']);
     liveSettingsCache = data;
   }
-  const { lat, lon, hideGround = true, alerts = [], caughtAircraft = [], units = 'metric', notifShow = {} } = liveSettingsCache;
+  const { lat, lon, alerts = [], caughtAircraft = [], units = 'metric', notifShow = {} } = liveSettingsCache;
   const showReg = notifShow.reg === true;
 
-  const list    = document.getElementById('acList');
-  const countEl = document.getElementById('liveCount');
-  const matchEl = document.getElementById('liveMatching');
+  const list          = document.getElementById('acList');
+  const countEl        = document.getElementById('liveCount');
+  const airborneEl     = document.getElementById('liveAirborne');
+  const matchEl        = document.getElementById('liveMatching');
 
   function isCaught(ac) {
     return (caughtAircraft || []).includes(ac.hex);
@@ -313,9 +320,12 @@ async function renderAircraftList() {
     return alerts.some(alert => alert.active && matchesAlert(ac, alert));
   }
 
+  // "In range" en "Airborne" tiles tonen altijd de volledige, ongefilterde data.
+  countEl.textContent    = lastAcData.length;
+  airborneEl.textContent = lastAcData.filter(ac => !isOnGround(ac)).length;
+
   let aircraft = [...lastAcData];
 
-  if (hideGround !== false) aircraft = aircraft.filter(ac => !isOnGround(ac));
   if (filterAirborne)       aircraft = aircraft.filter(ac => !isOnGround(ac));
   if (filterMatching)        aircraft = aircraft.filter(ac => isMatch(ac));
   if (searchQuery) {
@@ -350,12 +360,6 @@ async function renderAircraftList() {
     default:         aircraft.sort((a, b) => (b.gs || 0) - (a.gs || 0));                  break;
   }
 
-  const totalInRange = (() => {
-    let base = [...lastAcData];
-    if (hideGround !== false) base = base.filter(ac => !isOnGround(ac));
-    return base.length;
-  })();
-  countEl.textContent = totalInRange;
   matchEl.textContent = aircraft.filter(isMatch).length;
 
   if (aircraft.length === 0) {

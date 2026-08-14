@@ -1,5 +1,6 @@
-// background.js v1.1.0 — runs in the background and polls the API
+// background.js v1.2.0 — runs in the background and polls the API
 // Depends on shared.js (loaded via manifest.json background.scripts)
+// v1.2.0: ground traffic is now always filtered out of notifications (hideGround setting removed)
 
 // ─── OFFSCREEN DOCUMENT ────────────────────────────────────────────────────
 importScripts('shared.js');
@@ -126,11 +127,8 @@ async function pollAircraft() {
     return;
   }
 
-  let aircraft = data.ac || [];
-
-  if (config.hideGround !== false) {
-    aircraft = aircraft.filter(ac => !isOnGround(ac));
-  }
+  // Grondverkeer wordt altijd genegeerd voor notificaties. Geen instelling meer voor.
+  let aircraft = (data.ac || []).filter(ac => !isOnGround(ac));
 
   const now = Date.now();
 
@@ -204,6 +202,8 @@ async function pollAircraft() {
   chrome.action.setBadgeText({ text: matchCount > 0 ? String(matchCount) : '' });
   chrome.action.setBadgeBackgroundColor({ color: '#0052cc' });
 
+  // cachedAircraft blijft de volledige, ongefilterde lijst (incl. grondverkeer) —
+  // de Live tab heeft die ruwe data nodig voor de "In range" en "Airborne" tiles.
   await chrome.storage.local.set({ inRange: newInRange, lastPoll: now, lastCount: aircraft.length, cachedAircraft: data.ac || [] });
 }
 
@@ -299,6 +299,6 @@ function isOnGround(ac) {
 }
 
 async function getConfig() {
-  const result = await chrome.storage.local.get(['lat', 'lon', 'radius', 'alerts', 'hideGround', 'units']);
+  const result = await chrome.storage.local.get(['lat', 'lon', 'radius', 'alerts', 'units']);
   return result;
 }

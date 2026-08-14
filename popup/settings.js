@@ -1,5 +1,7 @@
-// settings.js v1.2.0 — injecteert Settings tab HTML en beheert alle instellingen
+// settings.js v1.3.0 — injecteert Settings tab HTML en beheert alle instellingen
 // showSaved() is beschikbaar via popup.js
+// v1.3.0: "Hide ground traffic" instelling verwijderd (nu altijd gefilterd voor notificaties,
+//         de "Airborne only" knop in de Live tab regelt de weergave)
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -47,23 +49,6 @@ function initSettingsTab() {
           <button class="btn-option" data-units="imperial">✈️ Imperial</button>
         </div>
         <p style="font-family:'Space Mono',monospace;font-size:9px;color:#4b5680;margin:6px 0 0">Metric: km · m · km/h &nbsp;·&nbsp; Imperial: nm · ft · kts</p>
-      </div>
-    </div>
-
-    <!-- 🔍 Filters -->
-    <div class="settings-card">
-      <button class="settings-card-toggle" data-target="cardFilters">
-        <span>🔍 Filters</span>
-        <span class="settings-chevron">▼</span>
-      </button>
-      <div class="settings-card-body" id="cardFilters" style="display:none">
-        <div class="settings-toggle-row">
-          <div class="settings-toggle-info">
-            <div class="settings-toggle-label">Hide ground traffic</div>
-            <div class="settings-toggle-sub">Global — affects notifications &amp; Live tab</div>
-          </div>
-          <button class="alert-toggle on" id="toggleGround"></button>
-        </div>
       </div>
     </div>
 
@@ -360,19 +345,8 @@ async function loadSettings() {
 // ─── INSTELLINGEN LADEN (geroepen vanuit popup.js) ─────────────────────────
 
 async function initSettings() {
-  const { hideGround = true, notificationsEnabled = true, notifShow, units = 'metric' } =
-    await chrome.storage.local.get(['hideGround', 'notificationsEnabled', 'notifShow', 'units']);
-
-  // Ground toggle
-  const toggleGround = document.getElementById('toggleGround');
-  toggleGround.className = `alert-toggle ${hideGround ? 'on' : ''}`;
-  toggleGround.addEventListener('click', async () => {
-    const { hideGround: cur = true } = await chrome.storage.local.get('hideGround');
-    const newVal = !cur;
-    await chrome.storage.local.set({ hideGround: newVal });
-    toggleGround.className = `alert-toggle ${newVal ? 'on' : ''}`;
-    showSaved('Filter');
-  });
+  const { notificationsEnabled = true, notifShow, units = 'metric' } =
+    await chrome.storage.local.get(['notificationsEnabled', 'notifShow', 'units']);
 
   // Units knoppen
   document.querySelectorAll('[data-units]').forEach(btn => {
@@ -516,7 +490,7 @@ async function initSettings() {
 
   const BACKUP_KEYS = [
     'alerts', 'lat', 'lon', 'radius', 'units',
-    'hideGround', 'notificationsEnabled', 'notifShow',
+    'notificationsEnabled', 'notifShow',
     'alertSound', 'alertVolume',
     'startupTab', 'lastTab',
     'caughtAircraft', 'caughtAircraftLabels',
