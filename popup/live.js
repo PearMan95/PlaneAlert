@@ -1,4 +1,5 @@
-// live.js v1.3.1 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
+// live.js v1.3.2 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
+// v1.3.2: lijstweergave respecteert nu notifShow.reg (registratie i.p.v. callsign)
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -218,7 +219,7 @@ function setupLiveEvents() {
   // renders triggeren. Cache wordt direct geïnvalideerd; render wacht 50ms.
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (!changes.units && !changes.hideGround && !changes.alerts && !changes.caughtAircraft) return;
+    if (!changes.units && !changes.hideGround && !changes.alerts && !changes.caughtAircraft && !changes.notifShow) return;
 
     if (changes.units) {
       const newUnits = changes.units.newValue || 'metric';
@@ -293,10 +294,11 @@ async function createBellBtn(type, value) {
 
 async function renderAircraftList() {
   if (!liveSettingsCache) {
-    const data = await chrome.storage.local.get(['lat', 'lon', 'hideGround', 'alerts', 'caughtAircraft', 'units']);
+    const data = await chrome.storage.local.get(['lat', 'lon', 'hideGround', 'alerts', 'caughtAircraft', 'units', 'notifShow']);
     liveSettingsCache = data;
   }
-  const { lat, lon, hideGround = true, alerts = [], caughtAircraft = [], units = 'metric' } = liveSettingsCache;
+  const { lat, lon, hideGround = true, alerts = [], caughtAircraft = [], units = 'metric', notifShow = {} } = liveSettingsCache;
+  const showReg = notifShow.reg === true;
 
   const list    = document.getElementById('acList');
   const countEl = document.getElementById('liveCount');
@@ -370,7 +372,9 @@ async function renderAircraftList() {
   for (const ac of aircraft) {
     const match    = isMatch(ac);
     const caught   = isCaught(ac);
-    const flight   = ac.flight?.trim() || ac.r || ac.hex || '???';
+    const flight   = showReg
+      ? (ac.r || ac.flight?.trim() || ac.hex || '???')
+      : (ac.flight?.trim() || ac.r || ac.hex || '???');
     const type     = ac.t || '';
     const altitude = fmtAlt(ac.alt_baro, units);
     const from     = ac.orig_iata || '';
