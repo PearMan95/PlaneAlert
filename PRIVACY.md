@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: March 18, 2026**
+**Last updated: June 4, 2026**
 
 ## Overview
 
@@ -14,7 +14,8 @@ Plane Alert collects and stores the following data locally on your device:
 - **Alert settings** — the alerts you configure (e.g. registrations, flight numbers, aircraft types).
 - **Notification preferences** — your notification and sound settings.
 - **Caught aircraft** — ICAO hex addresses of aircraft you have marked as caught.
-- **Notification history** — a local log of triggered alerts (callsign, timestamp, flight details).
+- **Notification history** — a local log of triggered alerts (callsign, timestamp, flight details). This log is stored only on your current device and is intentionally excluded from backup exports, as it reflects activity specific to your device and is not meaningful to restore.
+- **Statistics** — all-time counters derived from triggered notifications: total notification count, date of first detection, aircraft type counts, and airline prefix counts. These are stored locally and can be reset at any time via the History tab.
 
 ## How Your Data Is Used
 
@@ -23,6 +24,12 @@ All data is used solely to provide the core functionality of the extension: poll
 ## Data Storage
 
 All data is stored **locally on your device**, so nothing is shared with the developer. With one exception: your approximate location and radius are sent to the airplanes.live API with each poll to retrieve nearby aircraft.
+
+## Backup & Export
+
+The backup export (Settings → Backup) includes: alerts, location, radius, units, notification preferences, sound settings, startup tab, caught aircraft, and statistics.
+
+**Notification history is excluded from backups by design.** It is an ephemeral device-local log and carries no value when restored to a different device or after a reinstall.
 
 ## Third-Party Services
 
@@ -34,7 +41,7 @@ We do not sell, trade, or share any of your data with third parties.
 
 ## Data Deletion
 
-You can delete all locally stored data at any time by removing the extension from Chrome, or by using the "Export backup" feature and clearing your settings manually.
+You can delete all locally stored data at any time by removing the extension from Chrome, or by using the "Export backup" feature and clearing your settings manually. Notification history and statistics can be cleared independently via the History tab.
 
 ## Changes to This Policy
 

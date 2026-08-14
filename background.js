@@ -1,4 +1,4 @@
-// background.js — runs in the background and polls the API
+// background.js v1.1.0 — runs in the background and polls the API
 // Depends on shared.js (loaded via manifest.json background.scripts)
 
 // ─── OFFSCREEN DOCUMENT ────────────────────────────────────────────────────
@@ -72,6 +72,40 @@ chrome.runtime.onMessage.addListener((msg) => {
   }
 });
 
+// ─── STATISTIEKEN BIJHOUDEN ────────────────────────────────────────────────
+
+async function recordStats(ac) {
+  const keys = ['statsTotalCount', 'statsFirstDetection', 'statsTypeCounts', 'statsAirlineCounts'];
+  const data = await chrome.storage.local.get(keys);
+
+  const totalCount    = (data.statsTotalCount    || 0) + 1;
+  const firstDetect   = data.statsFirstDetection || new Date().toISOString();
+  const typeCounts    = data.statsTypeCounts     || {};
+  const airlineCounts = data.statsAirlineCounts  || {};
+
+  // Type tellen (alleen als bekend)
+  if (ac.t) {
+    const t = ac.t.toUpperCase().trim();
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
+  }
+
+  // Airline tellen: eerste 3 letters van vluchtcode, alleen als vlucht minstens 4 tekens heeft
+  if (ac.flight && ac.flight.trim().length >= 4) {
+    const prefix = ac.flight.trim().toUpperCase().substring(0, 3);
+    // Alleen letters (geen cijfers-prefix zoals militairen of privé)
+    if (/^[A-Z]{3}$/.test(prefix)) {
+      airlineCounts[prefix] = (airlineCounts[prefix] || 0) + 1;
+    }
+  }
+
+  await chrome.storage.local.set({
+    statsTotalCount:    totalCount,
+    statsFirstDetection: firstDetect,
+    statsTypeCounts:    typeCounts,
+    statsAirlineCounts: airlineCounts
+  });
+}
+
 async function pollAircraft() {
   const { enabled = true } = await chrome.storage.local.get('enabled');
   if (!enabled) return;
@@ -106,7 +140,6 @@ async function pollAircraft() {
   for (const ac of aircraft) {
     if (ac.hex && caughtAircraft.includes(ac.hex)) continue;
 
-    // matchesAlert komt uit shared.js
     const matchingAlert = config.alerts.find(alert => alert.active && matchesAlert(ac, alert));
     if (!matchingAlert) continue;
 
@@ -118,6 +151,9 @@ async function pollAircraft() {
 
     inRange[key] = true;
     await chrome.storage.local.set({ inRange });
+
+    // Statistieken bijhouden voor elke nieuwe match
+    await recordStats(ac);
 
     const { notificationsEnabled = true, notifShow = {} } =
       await chrome.storage.local.get(['notificationsEnabled', 'notifShow']);
@@ -175,7 +211,7 @@ chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
   if (btnIdx === 0) {
     const hexParts = notifId.split('_');
     const hex = hexParts.length >= 3 ? hexParts[1] : '';
-    chrome.tabs.create({ url: `https://globe.airplanes.live${hex ? `/?icao=${hex}` : ''}` });
+    chrome.tabs.create({ url: `https://globe.airplanes.live${hex ? `/?icao=${encodeURIComponent(hex)}` : ''}` });
   }
   if (btnIdx === 1) {
     const parts = notifId.split('_');

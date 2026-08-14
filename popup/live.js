@@ -1,4 +1,4 @@
-// live.js v1.1.0 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
+// live.js v1.3.1 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -41,9 +41,7 @@ function initLiveTab() {
         <span class="alt-value" id="minAltValue">0 m</span>
       </div>
     </div>
-    <div class="ac-list" id="acList">
-      <div class="empty-state">Press refresh to load aircraft.</div>
-    </div>
+    <div class="ac-list" id="acList"></div>
   `;
   setupLiveEvents();
 }
@@ -63,6 +61,7 @@ let searchQuery          = '';
 let liveSettingsCache    = null;
 let autoRefreshTimer     = null;
 let autoRefreshCountdown = null;
+let renderDebounceTimer  = null;
 
 // ─── AUTO-REFRESH ──────────────────────────────────────────────────────────
 
@@ -214,6 +213,9 @@ function setupLiveEvents() {
     renderAircraftList();
   });
 
+  // ── Gedebouncede storage listener ──────────────────────────────────────
+  // Voorkomt dat snelle opeenvolgende changes (bijv. unit-wissel) meerdere
+  // renders triggeren. Cache wordt direct geïnvalideerd; render wacht 50ms.
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     if (!changes.units && !changes.hideGround && !changes.alerts && !changes.caughtAircraft) return;
@@ -227,14 +229,14 @@ function setupLiveEvents() {
     }
 
     liveSettingsCache = null;
-    renderAircraftList();
+
+    clearTimeout(renderDebounceTimer);
+    renderDebounceTimer = setTimeout(() => renderAircraftList(), 50);
   });
 }
 
 // ─── BELL BUTTON HELPER ────────────────────────────────────────────────────
 
-// Maakt een bell-knop aan voor een alert-type/waarde combinatie.
-// Grijs + doorgestreept = geen alert actief. Groen = alert bestaat. Klik togglet.
 async function createBellBtn(type, value) {
   if (!value) return null;
 
@@ -279,7 +281,6 @@ async function createBellBtn(type, value) {
     await chrome.storage.local.set({ alerts });
     await syncState();
 
-    // Alerts tab direct bijwerken
     if (typeof renderAlerts === 'function') {
       renderAlerts(alerts);
     }
@@ -356,7 +357,9 @@ async function renderAircraftList() {
   matchEl.textContent = aircraft.filter(isMatch).length;
 
   if (aircraft.length === 0) {
-    list.innerHTML = '<div class="empty-state">No aircraft match the current filters.</div>';
+    list.innerHTML = lastAcData.length === 0
+      ? '<div class="empty-state">Press refresh to load aircraft.</div>'
+      : '<div class="empty-state">No aircraft match the current filters.</div>';
     currentDetailHex = null;
     return;
   }
@@ -381,23 +384,64 @@ async function renderAircraftList() {
 
     const item = document.createElement('div');
     item.className = `ac-item${match ? ' match' : ''}${isOpen ? ' open' : ''}`;
-    item.innerHTML = `
-      <div style="min-width:0">
-        <div class="ac-flight">${flight}${match ? '<span class="match-badge">MATCH</span>' : ''}${caught ? '<span class="caught-badge">CAUGHT</span>' : ''}</div>
-        <div class="ac-detail">${route}</div>
-        ${dist ? `<div class="ac-distance">${dist}</div>` : ''}
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="ac-altitude">${altitude}</div>
-        <span class="ac-chevron">${isOpen ? '▲' : '▼'}</span>
-      </div>
-    `;
+
+    // ── Linker kolom: flight, route, distance ──
+    const leftDiv = document.createElement('div');
+    leftDiv.style.minWidth = '0';
+
+    const flightDiv = document.createElement('div');
+    flightDiv.className = 'ac-flight';
+    flightDiv.appendChild(document.createTextNode(flight));
+    if (match) {
+      const matchBadge = document.createElement('span');
+      matchBadge.className = 'match-badge';
+      matchBadge.textContent = 'MATCH';
+      flightDiv.appendChild(matchBadge);
+    }
+    if (caught) {
+      const caughtBadge = document.createElement('span');
+      caughtBadge.className = 'caught-badge';
+      caughtBadge.textContent = 'CAUGHT';
+      flightDiv.appendChild(caughtBadge);
+    }
+
+    const detailDiv = document.createElement('div');
+    detailDiv.className = 'ac-detail';
+    detailDiv.textContent = route;
+
+    leftDiv.appendChild(flightDiv);
+    leftDiv.appendChild(detailDiv);
+
+    if (dist) {
+      const distDiv = document.createElement('div');
+      distDiv.className = 'ac-distance';
+      distDiv.textContent = dist;
+      leftDiv.appendChild(distDiv);
+    }
+
+    // ── Rechter kolom: altitude, chevron ──
+    const rightDiv = document.createElement('div');
+    rightDiv.style.cssText = 'display:flex;align-items:center;gap:8px';
+
+    const altDiv = document.createElement('div');
+    altDiv.className = 'ac-altitude';
+    altDiv.textContent = altitude;
+
+    const chevronSpan = document.createElement('span');
+    chevronSpan.className = 'ac-chevron';
+    chevronSpan.textContent = isOpen ? '▲' : '▼';
+
+    rightDiv.appendChild(altDiv);
+    rightDiv.appendChild(chevronSpan);
+
+    item.appendChild(leftDiv);
+    item.appendChild(rightDiv);
 
     const dropdown = document.createElement('div');
     dropdown.className = `ac-dropdown${isOpen ? ' open' : ''}`;
 
     if (isOpen) {
-      await buildDropdownContent(dropdown, ac, units, caught);
+      await buildDropdownContent(dropdown, ac, units);
     }
 
     item.addEventListener('click', async () => {
@@ -421,7 +465,7 @@ async function renderAircraftList() {
         item.classList.add('open');
         item.querySelector('.ac-chevron').textContent = '▲';
         dropdown.classList.add('open');
-        await buildDropdownContent(dropdown, ac, units, caught);
+        await buildDropdownContent(dropdown, ac, units);
         wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     });
@@ -434,8 +478,12 @@ async function renderAircraftList() {
 
 // ─── DROPDOWN CONTENT ──────────────────────────────────────────────────────
 
-async function buildDropdownContent(dropdown, ac, units, caught) {
-  // Cellen met optionele bell-knop (bell: null = geen knop)
+// Storage reads samengevoegd tot één call bovenaan de functie.
+// De catch-knop hergebruikt dezelfde data en doet geen losse get meer.
+async function buildDropdownContent(dropdown, ac, units) {
+  const { caughtAircraft: caughtList = [], caughtAircraftLabels: labels = {} } =
+    await chrome.storage.local.get(['caughtAircraft', 'caughtAircraftLabels']);
+
   const cellDefs = [
     { label: 'Registration', val: ac.r || '—',    bell: { type: 'registration', value: ac.r } },
     { label: 'Type',         val: ac.t || '—',    bell: { type: 'type',         value: ac.t } },
@@ -466,7 +514,6 @@ async function buildDropdownContent(dropdown, ac, units, caught) {
     valEl.textContent = def.val;
     valRow.appendChild(valEl);
 
-    // Voeg bell-knop toe als het veld een waarde heeft
     if (def.bell && def.bell.value) {
       const bellBtn = await createBellBtn(def.bell.type, def.bell.value);
       if (bellBtn) valRow.appendChild(bellBtn);
@@ -482,33 +529,29 @@ async function buildDropdownContent(dropdown, ac, units, caught) {
   mapBtn.textContent = '🗺️ Open on map';
   mapBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    chrome.tabs.create({ url: `https://globe.airplanes.live/?icao=${ac.hex}` });
+    chrome.tabs.create({ url: `https://globe.airplanes.live/?icao=${encodeURIComponent(ac.hex)}` });
   });
 
   const catchBtn = document.createElement('button');
   catchBtn.className = 'detail-catch-btn';
 
-  async function updateCatchBtn() {
-    const { caughtAircraft: current = [] } = await chrome.storage.local.get('caughtAircraft');
-    const isCaughtNow = current.includes(ac.hex);
-    catchBtn.textContent = isCaughtNow ? '↩️ Release this aircraft' : '🎯 Catch this aircraft';
-  }
-
-  await updateCatchBtn();
+  // Gebruik de al opgehaalde caughtList -- geen extra storage read nodig
+  const isCaughtNow = caughtList.includes(ac.hex);
+  catchBtn.textContent = isCaughtNow ? '↩️ Release this aircraft' : '🎯 Catch this aircraft';
 
   catchBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    const { caughtAircraft: current = [], caughtAircraftLabels: labels = {} } =
+    const { caughtAircraft: current = [], caughtAircraftLabels: currentLabels = {} } =
       await chrome.storage.local.get(['caughtAircraft', 'caughtAircraftLabels']);
     const idx = current.indexOf(ac.hex);
     if (idx === -1) {
       current.push(ac.hex);
-      labels[ac.hex] = buildCaughtLabel(ac);
+      currentLabels[ac.hex] = buildCaughtLabel(ac);
     } else {
       current.splice(idx, 1);
-      delete labels[ac.hex];
+      delete currentLabels[ac.hex];
     }
-    await chrome.storage.local.set({ caughtAircraft: current, caughtAircraftLabels: labels });
+    await chrome.storage.local.set({ caughtAircraft: current, caughtAircraftLabels: currentLabels });
     currentDetailHex = null;
     renderAircraftList();
   });

@@ -1,4 +1,5 @@
-// settings.js — injecteert Settings tab HTML en beheert alle instellingen
+// settings.js v1.2.0 — injecteert Settings tab HTML en beheert alle instellingen
+// showSaved() is beschikbaar via popup.js
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -34,6 +35,21 @@ function initSettingsTab() {
       </div>
     </div>
 
+    <!-- 📐 Units -->
+    <div class="settings-card">
+      <button class="settings-card-toggle" data-target="cardUnits">
+        <span>📐 Units</span>
+        <span class="settings-chevron">▼</span>
+      </button>
+      <div class="settings-card-body" id="cardUnits" style="display:none">
+        <div class="btn-group">
+          <button class="btn-option active" data-units="metric">📏 Metric</button>
+          <button class="btn-option" data-units="imperial">✈️ Imperial</button>
+        </div>
+        <p style="font-family:'Space Mono',monospace;font-size:9px;color:#4b5680;margin:6px 0 0">Metric: km · m · km/h &nbsp;·&nbsp; Imperial: nm · ft · kts</p>
+      </div>
+    </div>
+
     <!-- 🔍 Filters -->
     <div class="settings-card">
       <button class="settings-card-toggle" data-target="cardFilters">
@@ -51,21 +67,6 @@ function initSettingsTab() {
       </div>
     </div>
 
-    <!-- 📐 Units -->
-    <div class="settings-card">
-      <button class="settings-card-toggle" data-target="cardUnits">
-        <span>📐 Units</span>
-        <span class="settings-chevron">▼</span>
-      </button>
-      <div class="settings-card-body" id="cardUnits" style="display:none">
-        <div class="btn-group">
-          <button class="btn-option active" data-units="metric">📏 Metric</button>
-          <button class="btn-option" data-units="imperial">✈️ Imperial</button>
-        </div>
-        <p style="font-family:'Space Mono',monospace;font-size:9px;color:#4b5680;margin:6px 0 0">Metric: km · m · km/h &nbsp;·&nbsp; Imperial: nm · ft · kts</p>
-      </div>
-    </div>
-
     <!-- 🔔 Notifications -->
     <div class="settings-card">
       <button class="settings-card-toggle" data-target="cardNotifications">
@@ -73,32 +74,22 @@ function initSettingsTab() {
         <span class="settings-chevron">▼</span>
       </button>
       <div class="settings-card-body" id="cardNotifications" style="display:none">
-        <div class="settings-toggle-row" style="margin-bottom:12px">
+        <div class="settings-toggle-row" style="margin-bottom:14px">
           <div class="settings-toggle-info">
             <div class="settings-toggle-label">Desktop notifications</div>
             <div class="settings-toggle-sub">Polling continues when off</div>
           </div>
           <button class="alert-toggle on" id="toggleNotifications"></button>
         </div>
-        <div class="settings-sublabel" style="margin-top:12px">Sound</div>
-        <div class="btn-group" style="margin-bottom:6px">
-          <button class="btn-option" data-sound="off">🔕 Off</button>
-          <button class="btn-option active" data-sound="ping">🔔 Ping</button>
-          <button class="btn-option" data-sound="radar">📡 Radar</button>
-          <button class="btn-option" data-sound="alert">🚨 Alert</button>
-          <button class="btn-option" data-sound="chime">🎵 Chime</button>
-        </div>
-        <div class="btn-group" id="volumeRow">
-          <button class="btn-option" data-volume="0.2">🔈 Soft</button>
-          <button class="btn-option active" data-volume="0.5">🔉 Medium</button>
-          <button class="btn-option" data-volume="1.0">🔊 Loud</button>
-          <button class="btn-option" id="btnPreviewSound" style="flex:0.8">▶ Test</button>
-        </div>
-        <div class="settings-sublabel" style="margin-top:12px">Content</div>
+
+        <div class="settings-sublabel">Content</div>
         <div class="notif-builder" id="notifBuilder">
-          <div class="notif-builder-preview" id="notifPreview">
-            <div class="notif-preview-title" id="previewTitle">✈️ PH-BXA (B744) spotted!</div>
-            <div class="notif-preview-body" id="previewBody">8500m · 850 km/h · AMS→JFK · from the west</div>
+          <div class="notif-os-preview" id="notifPreview">
+            <img src="../icons/icon48.png" class="notif-os-icon" alt="">
+            <div class="notif-os-body">
+              <div class="notif-preview-title" id="previewTitle">✈️ PH-BXA (B744) spotted!</div>
+              <div class="notif-preview-body" id="previewBody">8500m · 850 km/h · AMS→JFK · from the west</div>
+            </div>
           </div>
           <div class="notif-toggle-list">
             <div class="notif-toggle-row">
@@ -127,6 +118,31 @@ function initSettingsTab() {
             </div>
           </div>
         </div>
+
+        <button class="btn-add" id="btnTestNotification" style="background:#1a2a4a;border:1px solid #2a4a8a;color:#60a5fa;margin-top:10px">🔔 Send test notification</button>
+      </div>
+    </div>
+
+    <!-- 🔊 Sound -->
+    <div class="settings-card">
+      <button class="settings-card-toggle" data-target="cardSound">
+        <span>🔊 Sound</span>
+        <span class="settings-chevron">▼</span>
+      </button>
+      <div class="settings-card-body" id="cardSound" style="display:none">
+        <div class="btn-group" style="margin-bottom:6px">
+          <button class="btn-option" data-sound="off">🔕 Off</button>
+          <button class="btn-option active" data-sound="ping">🔔 Ping</button>
+          <button class="btn-option" data-sound="radar">📡 Radar</button>
+          <button class="btn-option" data-sound="alert">🚨 Alert</button>
+          <button class="btn-option" data-sound="chime">🎵 Chime</button>
+        </div>
+        <div class="btn-group" id="volumeRow">
+          <button class="btn-option" data-volume="0.2">🔈 Soft</button>
+          <button class="btn-option active" data-volume="0.5">🔉 Medium</button>
+          <button class="btn-option" data-volume="1.0">🔊 Loud</button>
+          <button class="btn-option" id="btnPreviewSound" style="flex:0.8">▶ Test</button>
+        </div>
       </div>
     </div>
 
@@ -148,35 +164,23 @@ function initSettingsTab() {
       </div>
     </div>
 
-    <!-- 💾 Backup & Test -->
+    <!-- 💾 Backup -->
     <div class="settings-card">
       <button class="settings-card-toggle" data-target="cardBackup">
-        <span>💾 Backup &amp; Test</span>
+        <span>💾 Backup</span>
         <span class="settings-chevron">▼</span>
       </button>
       <div class="settings-card-body" id="cardBackup" style="display:none">
         <p style="font-family:'Space Mono',monospace;font-size:9px;color:#4b5680;margin:0 0 10px">Exports all settings including alerts, location and notifications.</p>
-        <div class="btn-group" style="margin-bottom:8px">
+        <div class="btn-group">
           <button class="btn-option" id="btnExportAlerts" style="padding:9px">⬆️ Export backup</button>
           <button class="btn-option" id="btnImportAlerts" style="padding:9px">⬇️ Import backup</button>
         </div>
         <input type="file" id="importFileInput" accept=".json" style="display:none">
-        <button class="btn-add" id="btnTestNotification" style="background:#1a2a4a;border:1px solid #2a4a8a;color:#60a5fa;">🔔 Send test notification</button>
       </div>
     </div>
   `;
   setupSettingsEvents();
-}
-
-// ─── SAVED TOAST ───────────────────────────────────────────────────────────
-
-let toastTimer = null;
-function showSaved(label = 'Saved') {
-  const toast = document.getElementById('savedToast');
-  toast.textContent = `✓ ${label}`;
-  toast.classList.add('visible');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('visible'), 1800);
 }
 
 // ─── LOCATIE ───────────────────────────────────────────────────────────────
@@ -327,7 +331,6 @@ function setupSettingsEvents() {
 // ─── INSTELLINGEN HERLADEN (na backup import) ──────────────────────────────
 
 async function loadSettings() {
-  // Onthoud welke kaarten open waren voor we de HTML herinjekten
   const openCards = [];
   document.querySelectorAll('.settings-card-body').forEach(body => {
     if (body.style.display !== 'none') openCards.push(body.id);
@@ -341,7 +344,6 @@ async function loadSettings() {
   initRadiusButtons(radius, units);
   await initSettings();
 
-  // Herstel open kaarten
   openCards.forEach(id => {
     const body = document.getElementById(id);
     if (body) {
@@ -517,7 +519,8 @@ async function initSettings() {
     'hideGround', 'notificationsEnabled', 'notifShow',
     'alertSound', 'alertVolume',
     'startupTab', 'lastTab',
-    'caughtAircraft', 'caughtAircraftLabels'
+    'caughtAircraft', 'caughtAircraftLabels',
+    'statsTotalCount', 'statsFirstDetection', 'statsTypeCounts', 'statsAirlineCounts'
   ];
 
   document.getElementById('btnExportAlerts').addEventListener('click', async () => {
