@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Plane Alert",
   "description": "Get notified when a tracked aircraft enters your area",
-  "version": "1.6.0",
+  "version": "1.6.2",
   "homepage_url": "https://github.com/PearMan95/plane-alert",
   "permissions": [
     "storage",
