@@ -1,3 +1,5 @@
+// settings.js v1.4.0 — injecteert Settings tab HTML en beheert alle instellingen
+// v1.4.0: nieuwe "🕓 History" kaart voor instelbare history-limiet (50/100/200/500)
 // settings.js v1.3.0 — injecteert Settings tab HTML en beheert alle instellingen
 // showSaved() is beschikbaar via popup.js
 // v1.3.0: "Hide ground traffic" instelling verwijderd (nu altijd gefilterd voor notificaties,
@@ -148,6 +150,48 @@ function initSettingsTab() {
         </div>
       </div>
     </div>
+
+    <!-- 🕓 History -->
+    <div class="settings-card">
+      <button class="settings-card-toggle" data-target="cardHistory">
+        <span>🕓 History</span>
+        <span class="settings-chevron">▼</span>
+      </button>
+      <div class="settings-card-body" id="cardHistory" style="display:none">
+        <p style="font-family:'Space Mono',monospace;font-size:9px;color:#4b5680;margin:0 0 10px">Maximum number of notifications kept in history.</p>
+        <div class="btn-group" id="historyLimitBtns">
+          <button class="btn-option" data-limit="50">50</button>
+          <button class="btn-option active" data-limit="100">100</button>
+          <button class="btn-option" data-limit="200">200</button>
+          <button class="btn-option" data-limit="500">500</button>
+        </div>
+      </div>
+    </div>
+
+    const { historyLimit = 100 } = await chrome.storage.local.get('historyLimit');
+
+    document.querySelectorAll('[data-limit]').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.limit) === historyLimit);
+    });
+
+    document.querySelectorAll('[data-limit]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const newLimit = parseInt(btn.dataset.limit);
+        await chrome.storage.local.set({ historyLimit: newLimit });
+        document.querySelectorAll('[data-limit]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Bestaande geschiedenis meteen afkappen als de nieuwe limiet lager is
+        const { notifHistory = [] } = await chrome.storage.local.get('notifHistory');
+        if (notifHistory.length > newLimit) {
+          const trimmed = notifHistory.slice(notifHistory.length - newLimit);
+          await chrome.storage.local.set({ notifHistory: trimmed });
+          if (typeof loadHistory === 'function') loadHistory();
+        }
+
+        showSaved('History limit');
+      });
+    });
 
     <!-- 💾 Backup -->
     <div class="settings-card">
@@ -494,7 +538,8 @@ async function initSettings() {
     'alertSound', 'alertVolume',
     'startupTab', 'lastTab',
     'caughtAircraft', 'caughtAircraftLabels',
-    'statsTotalCount', 'statsFirstDetection', 'statsTypeCounts', 'statsAirlineCounts'
+    'statsTotalCount', 'statsFirstDetection', 'statsTypeCounts', 'statsAirlineCounts',
+    'historyLimit'
   ];
 
   document.getElementById('btnExportAlerts').addEventListener('click', async () => {

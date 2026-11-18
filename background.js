@@ -1,3 +1,7 @@
+// background.js v1.4.0 — runs in the background and polls the API
+// v1.4.0: historyLimit instelbaar (default 100, uit storage i.p.v. hardcoded);
+//         recordStats() airline-telling nu consistent met matchesAlert() in shared.js
+//         (3 letters + cijfer vereist, sluit registraties in flight-veld uit)
 // background.js v1.3.0 — runs in the background and polls the API
 // Depends on shared.js (loaded via manifest.json background.scripts)
 // v1.2.0: ground traffic is now always filtered out of notifications (hideGround setting removed)
@@ -97,13 +101,10 @@ async function recordStats(ac) {
     typeCounts[t] = (typeCounts[t] || 0) + 1;
   }
 
-  // Airline tellen: eerste 3 letters van vluchtcode, alleen als vlucht minstens 4 tekens heeft
-  if (ac.flight && ac.flight.trim().length >= 4) {
-    const prefix = ac.flight.trim().toUpperCase().substring(0, 3);
-    // Alleen letters (geen cijfers-prefix zoals militairen of privé)
-    if (/^[A-Z]{3}$/.test(prefix)) {
-      airlineCounts[prefix] = (airlineCounts[prefix] || 0) + 1;
-    }
+  const flight = (ac.flight || '').toUpperCase().trim();
+  if (/^[A-Z]{3}\d/.test(flight)) {
+    const prefix = flight.substring(0, 3);
+    airlineCounts[prefix] = (airlineCounts[prefix] || 0) + 1;
   }
 
   await chrome.storage.local.set({
@@ -212,9 +213,10 @@ async function pollAircraft() {
     if (from && to) parts.push(`${from}→${to}`);
     if (ac.t) parts.push(ac.t);
 
-    const { notifHistory = [] } = await chrome.storage.local.get('notifHistory');
+    const { notifHistory = [], historyLimit = 100 } =
+      await chrome.storage.local.get(['notifHistory', 'historyLimit']);
     notifHistory.push({ ts: now, callsign, detail: parts.join(' · ') || '—', hex: ac.hex });
-    if (notifHistory.length > 100) notifHistory.splice(0, notifHistory.length - 100);
+    if (notifHistory.length > historyLimit) notifHistory.splice(0, notifHistory.length - historyLimit);
     await chrome.storage.local.set({ notifHistory });
 
     console.log(`[FlightAlert] New in range: ${ac.flight || ac.hex} for alert "${matchingAlert.label}"`);
