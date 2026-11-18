@@ -1,6 +1,10 @@
-// background.js v1.2.0 — runs in the background and polls the API
+// background.js v1.3.0 — runs in the background and polls the API
 // Depends on shared.js (loaded via manifest.json background.scripts)
 // v1.2.0: ground traffic is now always filtered out of notifications (hideGround setting removed)
+// v1.3.0: pollAircraft() is now the single source of truth for API polling. It no longer
+//         requires active alerts to run (needed so the Live tab can request polls via
+//         pollNow without its own fetch), and always returns a status object so callers
+//         (e.g. live.js) know what happened.
 
 // ─── OFFSCREEN DOCUMENT ────────────────────────────────────────────────────
 importScripts('shared.js');
@@ -57,9 +61,12 @@ chrome.runtime.onStartup.addListener(async () => {
   }
 });
 
-chrome.runtime.onMessage.addListener((msg) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'pollNow') {
-    pollAircraft();
+    pollAircraft()
+      .then((result) => sendResponse(result))
+      .catch((err) => sendResponse({ ok: false, status: 'error', message: err.message }));
+    return true; // houdt het message-kanaal open voor het async antwoord
   }
   if (msg.type === 'setEnabled') {
     if (msg.enabled) {
@@ -107,12 +114,22 @@ async function recordStats(ac) {
   });
 }
 
+// ─── POLLEN ────────────────────────────────────────────────────────────────
+// Enige fetch-pad naar de API. Wordt aangeroepen door de minuut-alarm én door
+// live.js via een pollNow-bericht. Vereist geen actieve alerts meer, zodat de
+// Live tab altijd verse data kan opvragen ook zonder dat er alerts zijn ingesteld.
+// Geeft altijd een statusobject terug: { ok: true } of { ok: false, status, message? }
+
 async function pollAircraft() {
   const { enabled = true } = await chrome.storage.local.get('enabled');
-  if (!enabled) return;
+  if (!enabled) {
+    return { ok: false, status: 'disabled' };
+  }
 
   const config = await getConfig();
-  if (!config.lat || !config.lon || !config.alerts || config.alerts.length === 0) return;
+  if (!config.lat || !config.lon) {
+    return { ok: false, status: 'no_location' };
+  }
 
   const radiusNM = kmToNM(config.radius || 50);
   const url = `${API_BASE}/${config.lat}/${config.lon}/${radiusNM}`;
@@ -120,17 +137,22 @@ async function pollAircraft() {
   let data;
   try {
     const resp = await fetch(url);
+    if (resp.status === 429) {
+      console.warn('[FlightAlert] API rate limit reached (429)');
+      return { ok: false, status: 'rate_limited' };
+    }
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     data = await resp.json();
   } catch (err) {
     console.error('[FlightAlert] API error:', err);
-    return;
+    return { ok: false, status: 'error', message: err.message };
   }
 
   // Grondverkeer wordt altijd genegeerd voor notificaties. Geen instelling meer voor.
   let aircraft = (data.ac || []).filter(ac => !isOnGround(ac));
 
   const now = Date.now();
+  const alerts = config.alerts || [];
 
   const { inRange = {}, caughtAircraft = [] } = await chrome.storage.local.get(['inRange', 'caughtAircraft']);
   const newInRange = {};
@@ -138,7 +160,7 @@ async function pollAircraft() {
   for (const ac of aircraft) {
     if (ac.hex && caughtAircraft.includes(ac.hex)) continue;
 
-    const matchingAlert = config.alerts.find(alert => alert.active && matchesAlert(ac, alert));
+    const matchingAlert = alerts.find(alert => alert.active && matchesAlert(ac, alert));
     if (!matchingAlert) continue;
 
     const key = ac.hex;
@@ -205,6 +227,8 @@ async function pollAircraft() {
   // cachedAircraft blijft de volledige, ongefilterde lijst (incl. grondverkeer) —
   // de Live tab heeft die ruwe data nodig voor de "In range" en "Airborne" tiles.
   await chrome.storage.local.set({ inRange: newInRange, lastPoll: now, lastCount: aircraft.length, cachedAircraft: data.ac || [] });
+
+  return { ok: true };
 }
 
 chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {

@@ -1,4 +1,9 @@
-// live.js v1.4.0 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
+// live.js v1.5.0 — injecteert Live tab HTML en beheert vliegtuigenlijst, filters, detail dropdown
+// v1.5.0: geen eigen fetch meer naar de API. loadLive() vraagt background.js om te pollen via
+//         pollNow (requestPoll), zodat er maar één fetch-pad naar airplanes.live is en de
+//         race tussen background.js en live.js op cachedAircraft/lastPoll is opgelost.
+//         Storage-listener luistert nu ook naar cachedAircraft, zodat de Live tab live
+//         meebeweegt met de achtergrond-alarm-poll.
 // v1.4.0: hideGround-instelling weggehaald. "In range" en "Airborne" zijn nu losse tiles die
 //         altijd de volledige data tonen; alleen de "Airborne only" knop filtert de lijst zelf.
 // v1.3.2: lijstweergave respecteert notifShow.reg (registratie i.p.v. callsign)
@@ -69,6 +74,22 @@ let liveSettingsCache    = null;
 let autoRefreshTimer     = null;
 let autoRefreshCountdown = null;
 let renderDebounceTimer  = null;
+
+// ─── BACKGROUND POLL AANVRAGEN ──────────────────────────────────────────────
+// Enige manier waarop de Live tab nieuwe data opvraagt. Geen eigen fetch meer;
+// background.js doet de fetch en schrijft naar storage, dit stuurt alleen het verzoek.
+
+function requestPoll() {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'pollNow' }, (response) => {
+      if (chrome.runtime.lastError) {
+        resolve({ ok: false, status: 'error', message: chrome.runtime.lastError.message });
+        return;
+      }
+      resolve(response || { ok: false, status: 'error', message: 'No response from background' });
+    });
+  });
+}
 
 // ─── AUTO-REFRESH ──────────────────────────────────────────────────────────
 
@@ -223,9 +244,16 @@ function setupLiveEvents() {
   // ── Gedebouncede storage listener ──────────────────────────────────────
   // Voorkomt dat snelle opeenvolgende changes (bijv. unit-wissel) meerdere
   // renders triggeren. Cache wordt direct geïnvalideerd; render wacht 50ms.
+  // Luistert nu ook naar cachedAircraft, zodat een poll vanuit de achtergrond-alarm
+  // (zonder dat de Live tab zelf iets heeft aangevraagd) ook meteen zichtbaar wordt.
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (!changes.units && !changes.alerts && !changes.caughtAircraft && !changes.notifShow) return;
+
+    if (changes.cachedAircraft) {
+      lastAcData = changes.cachedAircraft.newValue || [];
+    }
+
+    if (!changes.units && !changes.alerts && !changes.caughtAircraft && !changes.notifShow && !changes.cachedAircraft) return;
 
     if (changes.units) {
       const newUnits = changes.units.newValue || 'metric';
@@ -571,6 +599,9 @@ async function buildDropdownContent(dropdown, ac, units) {
 }
 
 // ─── LADEN ─────────────────────────────────────────────────────────────────
+// Geen eigen fetch meer naar airplanes.live. requestPoll() stuurt een pollNow-
+// bericht naar background.js, dat de enige fetch doet en naar storage schrijft.
+// Deze functie leest daarna de verse cachedAircraft terug.
 
 async function loadLive(forceNew = false) {
   liveSettingsCache = null;
@@ -598,8 +629,8 @@ async function loadLive(forceNew = false) {
   if (btnMatching)  btnMatching.classList.toggle('active', filterMatching);
   if (btnAirborne)  btnAirborne.classList.toggle('active', filterAirborne);
 
-  const { lat, lon, radius = 50, lastPoll, cachedAircraft } =
-    await chrome.storage.local.get(['lat', 'lon', 'radius', 'lastPoll', 'cachedAircraft']);
+  const { lat, lon, lastPoll, cachedAircraft } =
+    await chrome.storage.local.get(['lat', 'lon', 'lastPoll', 'cachedAircraft']);
 
   const list = document.getElementById('acList');
   const btn  = document.getElementById('btnRefresh');
@@ -628,27 +659,27 @@ async function loadLive(forceNew = false) {
     list.innerHTML = '<div class="empty-state">Loading...</div>';
   }
 
-  const url = `https://api.airplanes.live/v2/point/${lat}/${lon}/${Math.round(radius / 1.852)}`;
+  const result = await requestPoll();
 
-  try {
-    const resp = await fetch(url);
-    if (resp.status === 429) {
+  if (!result.ok) {
+    if (result.status === 'rate_limited') {
       if (!cachedAircraft) {
         list.innerHTML = `<div class="error-message">API rate limit reached (429).<br>Wait a minute and try again.</div>`;
       }
-      return;
-    } else if (!resp.ok) {
-      throw new Error(`HTTP ${resp.status}`);
-    } else {
-      const data = await resp.json();
-      lastAcData = data.ac || [];
-      await chrome.storage.local.set({ cachedAircraft: lastAcData, lastPoll: Date.now() });
-      renderAircraftList();
-      startAutoRefresh();
+    } else if (result.status === 'no_location') {
+      list.innerHTML = '<div class="empty-state">Set your location first via ⚙️ Settings.</div>';
+    } else if (result.status === 'disabled') {
+      if (!cachedAircraft) {
+        list.innerHTML = '<div class="empty-state">Plane Alert is paused. Toggle on to fetch live data.</div>';
+      }
+    } else if (!cachedAircraft) {
+      list.innerHTML = `<div class="error-message">Could not reach the API:<br>${result.message || 'Unknown error'}</div>`;
     }
-  } catch (err) {
-    if (!cachedAircraft) {
-      list.innerHTML = `<div class="error-message">Could not reach the API:<br>${err.message}</div>`;
-    }
+    return;
   }
+
+  const fresh = await chrome.storage.local.get(['cachedAircraft']);
+  lastAcData = fresh.cachedAircraft || [];
+  renderAircraftList();
+  startAutoRefresh();
 }
