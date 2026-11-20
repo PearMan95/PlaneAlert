@@ -68,6 +68,14 @@ function initSettingsTab() {
           <button class="alert-toggle on" id="toggleNotifications"></button>
         </div>
 
+           <div class="settings-toggle-row" style="margin-bottom:14px">
+          <div class="settings-toggle-info">
+            <div class="settings-toggle-label">Hide LADD aircraft</div>
+            <div class="settings-toggle-sub">Skip LADD aircraft when matching alerts</div>
+          </div>
+          <button class="alert-toggle" id="toggleHideLadd"></button>
+        </div>
+
         <div class="settings-sublabel">Content</div>
         <div class="notif-builder" id="notifBuilder">
           <div class="notif-os-preview" id="notifPreview">
@@ -399,6 +407,18 @@ async function initSettings() {
     showSaved('Notifications');
   });
 
+  // Hide LADD aircraft toggle (default off)
+  const { hideLadd = false } = await chrome.storage.local.get('hideLadd');
+  const toggleHideLadd = document.getElementById('toggleHideLadd');
+  toggleHideLadd.className = `alert-toggle ${hideLadd ? 'on' : ''}`;
+  toggleHideLadd.addEventListener('click', async () => {
+    const { hideLadd: cur = false } = await chrome.storage.local.get('hideLadd');
+    const newVal = !cur;
+    await chrome.storage.local.set({ hideLadd: newVal });
+    toggleHideLadd.className = `alert-toggle ${newVal ? 'on' : ''}`;
+    showSaved('LADD filter');
+  });
+
   // Geluid knoppen
   const { alertSound = 'ping', alertVolume = 0.5 } =
     await chrome.storage.local.get(['alertSound', 'alertVolume']);
@@ -540,7 +560,7 @@ async function initSettings() {
     'startupTab', 'lastTab',
     'caughtAircraft', 'caughtAircraftLabels',
     'statsTotalCount', 'statsFirstDetection', 'statsTypeCounts', 'statsAirlineCounts',
-    'historyLimit'
+    'historyLimit','hideLadd'
   ];
 
   document.getElementById('btnExportAlerts').addEventListener('click', async () => {

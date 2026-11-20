@@ -152,6 +152,12 @@ async function pollAircraft() {
   // Grondverkeer wordt altijd genegeerd voor notificaties. Geen instelling meer voor.
   let aircraft = (data.ac || []).filter(ac => !isOnGround(ac));
 
+  // Optionally hide LADD aircraft (setting "Hide LADD aircraft", default off)
+  if (config.hideLadd) {
+    aircraft = aircraft.filter(ac => !isLadd(ac));
+  }
+
+
   const now = Date.now();
   const alerts = config.alerts || [];
 
@@ -324,7 +330,11 @@ function isOnGround(ac) {
   return ac.alt_baro === 'ground' || ac.alt_baro === 0 || ac.onGnd === true;
 }
 
+function isLadd(ac) {
+  return ((ac.dbFlags || 0) & 8) !== 0;
+}
+
 async function getConfig() {
-  const result = await chrome.storage.local.get(['lat', 'lon', 'radius', 'alerts', 'units']);
+  const result = await chrome.storage.local.get(['lat', 'lon', 'radius', 'alerts', 'units','hideLadd']);
   return result;
 }
