@@ -1,7 +1,6 @@
 // settings.js v1.4.0 — injecteert Settings tab HTML en beheert alle instellingen
-// v1.4.0: nieuwe "🕓 History" kaart voor instelbare history-limiet (50/100/200/500)
-// settings.js v1.3.0 — injecteert Settings tab HTML en beheert alle instellingen
 // showSaved() is beschikbaar via popup.js
+// v1.4.0: nieuwe "🕓 History" kaart voor instelbare history-limiet (50/100/200/500)
 // v1.3.0: "Hide ground traffic" instelling verwijderd (nu altijd gefilterd voor notificaties,
 //         de "Airborne only" knop in de Live tab regelt de weergave)
 
@@ -67,6 +66,14 @@ function initSettingsTab() {
             <div class="settings-toggle-sub">Polling continues when off</div>
           </div>
           <button class="alert-toggle on" id="toggleNotifications"></button>
+        </div>
+
+           <div class="settings-toggle-row" style="margin-bottom:14px">
+          <div class="settings-toggle-info">
+            <div class="settings-toggle-label">Hide LADD aircraft</div>
+            <div class="settings-toggle-sub">Skip LADD aircraft when matching alerts</div>
+          </div>
+          <button class="alert-toggle" id="toggleHideLadd"></button>
         </div>
 
         <div class="settings-sublabel">Content</div>
@@ -167,31 +174,6 @@ function initSettingsTab() {
         </div>
       </div>
     </div>
-
-    const { historyLimit = 100 } = await chrome.storage.local.get('historyLimit');
-
-    document.querySelectorAll('[data-limit]').forEach(btn => {
-      btn.classList.toggle('active', parseInt(btn.dataset.limit) === historyLimit);
-    });
-
-    document.querySelectorAll('[data-limit]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const newLimit = parseInt(btn.dataset.limit);
-        await chrome.storage.local.set({ historyLimit: newLimit });
-        document.querySelectorAll('[data-limit]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        // Bestaande geschiedenis meteen afkappen als de nieuwe limiet lager is
-        const { notifHistory = [] } = await chrome.storage.local.get('notifHistory');
-        if (notifHistory.length > newLimit) {
-          const trimmed = notifHistory.slice(notifHistory.length - newLimit);
-          await chrome.storage.local.set({ notifHistory: trimmed });
-          if (typeof loadHistory === 'function') loadHistory();
-        }
-
-        showSaved('History limit');
-      });
-    });
 
     <!-- 💾 Backup -->
     <div class="settings-card">
@@ -425,6 +407,18 @@ async function initSettings() {
     showSaved('Notifications');
   });
 
+  // Hide LADD aircraft toggle (default off)
+  const { hideLadd = false } = await chrome.storage.local.get('hideLadd');
+  const toggleHideLadd = document.getElementById('toggleHideLadd');
+  toggleHideLadd.className = `alert-toggle ${hideLadd ? 'on' : ''}`;
+  toggleHideLadd.addEventListener('click', async () => {
+    const { hideLadd: cur = false } = await chrome.storage.local.get('hideLadd');
+    const newVal = !cur;
+    await chrome.storage.local.set({ hideLadd: newVal });
+    toggleHideLadd.className = `alert-toggle ${newVal ? 'on' : ''}`;
+    showSaved('LADD filter');
+  });
+
   // Geluid knoppen
   const { alertSound = 'ping', alertVolume = 0.5 } =
     await chrome.storage.local.get(['alertSound', 'alertVolume']);
@@ -530,6 +524,33 @@ async function initSettings() {
     });
   });
 
+  // ── History limit ────────────────────────────────────────────────────────
+
+  const { historyLimit = 100 } = await chrome.storage.local.get('historyLimit');
+
+  document.querySelectorAll('[data-limit]').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.limit) === historyLimit);
+  });
+
+  document.querySelectorAll('[data-limit]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const newLimit = parseInt(btn.dataset.limit);
+      await chrome.storage.local.set({ historyLimit: newLimit });
+      document.querySelectorAll('[data-limit]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Bestaande geschiedenis meteen afkappen als de nieuwe limiet lager is
+      const { notifHistory = [] } = await chrome.storage.local.get('notifHistory');
+      if (notifHistory.length > newLimit) {
+        const trimmed = notifHistory.slice(notifHistory.length - newLimit);
+        await chrome.storage.local.set({ notifHistory: trimmed });
+        if (typeof loadHistory === 'function') loadHistory();
+      }
+
+      showSaved('History limit');
+    });
+  });
+
   // ── Backup export / import ───────────────────────────────────────────────
 
   const BACKUP_KEYS = [
@@ -539,7 +560,7 @@ async function initSettings() {
     'startupTab', 'lastTab',
     'caughtAircraft', 'caughtAircraftLabels',
     'statsTotalCount', 'statsFirstDetection', 'statsTypeCounts', 'statsAirlineCounts',
-    'historyLimit'
+    'historyLimit','hideLadd'
   ];
 
   document.getElementById('btnExportAlerts').addEventListener('click', async () => {
@@ -639,7 +660,7 @@ function previewSound(sound, volume) {
   switch (sound) {
     case 'ping':  tone(880, t, 0.4); break;
     case 'radar': tone(440, t, 0.25); tone(660, t + 0.3, 0.25); break;
-    case 'alert': tone(523, t, 0.15, 'square'); tone(659, t + 0.18, 0.15, 'square'); tone(784, t + 0.36, 0.25, 'square'); break;
+    case 'alert': tone(523, t, 0.15, 'square'); tone(659, t + 0.18, 0.15, 'square'); tone(784, t + 0.30, 0.8); break;
     case 'chime': tone(523, t, 0.6); tone(659, t + 0.15, 0.6); tone(784, t + 0.30, 0.8); break;
   }
 }

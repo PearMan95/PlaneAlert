@@ -9,7 +9,6 @@
 
 <!-- ── Header ── -->
 <div class="header">
-  <div class="header-icon">✈️</div>
   <div class="header-title">Plane<span>Alert</span></div>
   <div class="master-toggle" style="margin-left:auto">
     <span class="master-toggle-label" id="masterLabel">off</span>
@@ -86,9 +85,11 @@
           <div class="help-row"><span class="help-key">Hide ground traffic</span><span>Global setting — suppresses both notifications and Live tab entries for aircraft on the ground</span></div>
           <div class="help-row"><span class="help-key">Units</span><span>Switch between metric (km · m · km/h) and imperial (nm · ft · kts). Affects the Live tab, detail dropdown, and notifications.</span></div>
           <div class="help-row"><span class="help-key">Notifications</span><span>Toggle desktop notifications on or off. Polling continues either way.</span></div>
+          <div class="help-row"><span class="help-key">Hide LADD aircraft</span><span>Skip aircraft whose operator has opted out of tracking (LADD) when matching alerts. Off by default.</span></div>
           <div class="help-row"><span class="help-key">Sound</span><span>Choose an alert sound and volume. A preview plays when you select a sound.</span></div>
           <div class="help-row"><span class="help-key">Content</span><span>Choose which details appear in each notification: aircraft type, altitude, speed, route and/or direction</span></div>
           <div class="help-row"><span class="help-key">Startup tab</span><span>Choose which tab opens when you launch the extension. Set it to a fixed tab or to <em>Last used</em> to always return to where you left off.</span></div>
+          <div class="help-row"><span class="help-key">History</span><span>Choose how many notifications are kept in history: 50, 100 (default), 200 or 500. Lowering the limit immediately trims existing history.</span></div>
           <div class="help-row"><span class="help-key">Backup</span><span>Export all settings (alerts, location, radius, notification preferences) to a JSON file. Import restores everything at once. Old alerts-only backups are still supported. Note: notification history is not included in exports.</span></div>
         </div>
       </div>

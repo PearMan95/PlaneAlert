@@ -285,16 +285,19 @@ body {
 /* ─── PANELS ───────────────────────────────────────────────────────────────── */
 .panels-wrapper { position: relative; flex: 1; min-height: 0; overflow-y: auto; }
 
+/* v1.2.0: overlay is nu scope-beperkt tot de Live tab en zit niet meer "absolute"
+   binnen de scrollcontainer (dat dekte alleen de zichtbare hoogte af, niet de
+   volledige scrollhoogte). In plaats daarvan wordt het paneel zelf verborgen
+   via .paused-hidden en vult de overlay gewoon de normale flow van dat paneel. */
 .disabled-overlay {
   display: none;
-  position: absolute;
-  inset: 0;
-  background: rgba(8, 9, 15, 0.85);
-  z-index: 10;
+  width: 100%;
+  min-height: 100%;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   gap: 10px;
+  background: rgba(8, 9, 15, 0.85);
 }
 .disabled-overlay.visible     { display: flex; }
 .disabled-overlay-icon        { font-size: 32px; opacity: 0.5; }
@@ -302,6 +305,7 @@ body {
 
 .panel        { display: none; padding: 16px 18px; }
 .panel.active { display: block; }
+.panel.paused-hidden { display: none !important; }
 
 /* ─── SHARED COMPONENTS ────────────────────────────────────────────────────── */
 .section-label {
