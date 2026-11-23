@@ -1,4 +1,7 @@
-// popup.js v1.1.0 — init, tab switching, help overlay, master toggle, status
+// popup.js v1.2.0 — init, tab switching, help overlay, master toggle, status, paused-state fix
+// v1.2.0: disabled-overlay toont nu alleen nog op de Live tab (andere tabs blijven altijd
+//         bruikbaar bij gepauzeerde tracking), en verbergt het Live-paneel volledig i.p.v.
+//         het alleen af te dekken, zodat scrollen niet meer onder de overlay uitkomt.
 
 // ─── TOAST (gedeeld door alle popup-scripts) ───────────────────────────────
 
@@ -14,6 +17,8 @@ function showSaved(label = 'Saved') {
 
 // ─── TAB SWITCHING ─────────────────────────────────────────────────────────
 
+let currentTab = 'alerts';
+
 function activateTab(tabName) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -24,12 +29,15 @@ function activateTab(tabName) {
 
   tab.classList.add('active');
   panel.classList.add('active');
+  currentTab = tabName;
 
   // Stop auto-refresh als we de Live tab verlaten
   if (tabName !== 'live') stopAutoRefresh();
 
   if (tabName === 'live')    loadLive();
   if (tabName === 'history') loadHistory();
+
+  updateDisabledOverlay();
 }
 
 document.querySelectorAll('.tab').forEach(tab => {
@@ -68,14 +76,30 @@ document.addEventListener('keydown', (e) => {
 // ─── MASTER TOGGLE ─────────────────────────────────────────────────────────
 
 function applyEnabledUI(enabled) {
-  const pill    = document.getElementById('masterToggle');
-  const label   = document.getElementById('masterLabel');
-  const overlay = document.getElementById('disabledOverlay');
+  const pill  = document.getElementById('masterToggle');
+  const label = document.getElementById('masterLabel');
 
   pill.classList.toggle('on', enabled);
   label.textContent = enabled ? 'on' : 'off';
   label.classList.toggle('on', enabled);
-  overlay.classList.toggle('visible', !enabled);
+
+  updateDisabledOverlay(enabled);
+}
+
+// Toont de "paused" overlay alleen op de Live tab, en verbergt daarbij het
+// volledige Live-paneel (i.p.v. het alleen af te dekken), zodat er niets
+// meer is om onderdoor te scrollen.
+function updateDisabledOverlay(enabled) {
+  if (enabled === undefined) {
+    enabled = document.getElementById('masterToggle').classList.contains('on');
+  }
+  const shouldShow = !enabled && currentTab === 'live';
+
+  const overlay = document.getElementById('disabledOverlay');
+  overlay.classList.toggle('visible', shouldShow);
+
+  const livePanel = document.getElementById('tab-live');
+  if (livePanel) livePanel.classList.toggle('paused-hidden', shouldShow);
 }
 
 document.getElementById('masterToggle').addEventListener('click', async () => {
