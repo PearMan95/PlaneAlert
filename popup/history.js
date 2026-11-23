@@ -1,4 +1,6 @@
-// history.js v1.2.1 — injecteert History tab HTML en beheert notificatiegeschiedenis
+// history.js v1.2.2 — injecteert History tab HTML en beheert notificatiegeschiedenis
+// v1.2.2: tijdweergave in loadHistory() gebruikt nu 'timeFormat' uit storage (12h/24h),
+//         los van de browser/OS-locale
 
 // ─── HTML INJECTIE ──────────────────────────────────────────────────────────
 
@@ -242,7 +244,9 @@ async function renderCaughtList() {
 // ─── LADEN ─────────────────────────────────────────────────────────────────
 
 async function loadHistory() {
-  const { notifHistory = [] } = await chrome.storage.local.get('notifHistory');
+  const { notifHistory = [], timeFormat = '24h' } =
+    await chrome.storage.local.get(['notifHistory', 'timeFormat']);
+  const hour12 = timeFormat === '12h';
   const list = document.getElementById('historyList');
 
   if (notifHistory.length === 0) {
@@ -255,7 +259,7 @@ async function loadHistory() {
     const item     = document.createElement('div');
     item.className = 'history-item';
     const time     = new Date(entry.ts);
-    const timeStr  = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeStr  = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12 });
     const dateStr  = time.toLocaleDateString([], { day: '2-digit', month: 'short' });
 
     const topRow = document.createElement('div');

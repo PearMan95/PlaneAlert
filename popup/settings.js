@@ -1,5 +1,7 @@
-// settings.js v1.4.0 — injecteert Settings tab HTML en beheert alle instellingen
+// settings.js v1.5.0 — injecteert Settings tab HTML en beheert alle instellingen
 // showSaved() is beschikbaar via popup.js
+// v1.5.0: nieuwe 12h/24h tijdformaat-toggle in de Units-kaart (los van browser/OS-locale),
+//         default 24h, opgeslagen als 'timeFormat' en meegenomen in backup export/import
 // v1.4.0: nieuwe "🕓 History" kaart voor instelbare history-limiet (50/100/200/500)
 // v1.3.0: "Hide ground traffic" instelling verwijderd (nu altijd gefilterd voor notificaties,
 //         de "Airborne only" knop in de Live tab regelt de weergave)
@@ -50,6 +52,13 @@ function initSettingsTab() {
           <button class="btn-option" data-units="imperial">✈️ Imperial</button>
         </div>
         <p style="font-family:'Space Mono',monospace;font-size:9px;color:#4b5680;margin:6px 0 0">Metric: km · m · km/h &nbsp;·&nbsp; Imperial: nm · ft · kts</p>
+
+        <div class="settings-sublabel" style="margin-top:14px">Time format</div>
+        <div class="btn-group">
+          <button class="btn-option active" data-timeformat="24h">🕐 24-hour</button>
+          <button class="btn-option" data-timeformat="12h">🕐 12-hour</button>
+        </div>
+        <p style="font-family:'Space Mono',monospace;font-size:9px;color:#4b5680;margin:6px 0 0">Applies to notification history timestamps, independent of your browser/OS locale.</p>
       </div>
     </div>
 
@@ -66,14 +75,6 @@ function initSettingsTab() {
             <div class="settings-toggle-sub">Polling continues when off</div>
           </div>
           <button class="alert-toggle on" id="toggleNotifications"></button>
-        </div>
-
-           <div class="settings-toggle-row" style="margin-bottom:14px">
-          <div class="settings-toggle-info">
-            <div class="settings-toggle-label">Hide LADD aircraft</div>
-            <div class="settings-toggle-sub">Skip LADD aircraft when matching alerts</div>
-          </div>
-          <button class="alert-toggle" id="toggleHideLadd"></button>
         </div>
 
         <div class="settings-sublabel">Content</div>
@@ -371,8 +372,8 @@ async function loadSettings() {
 // ─── INSTELLINGEN LADEN (geroepen vanuit popup.js) ─────────────────────────
 
 async function initSettings() {
-  const { notificationsEnabled = true, notifShow, units = 'metric' } =
-    await chrome.storage.local.get(['notificationsEnabled', 'notifShow', 'units']);
+  const { notificationsEnabled = true, notifShow, units = 'metric', timeFormat = '24h' } =
+    await chrome.storage.local.get(['notificationsEnabled', 'notifShow', 'units', 'timeFormat']);
 
   // Units knoppen
   document.querySelectorAll('[data-units]').forEach(btn => {
@@ -391,6 +392,21 @@ async function initSettings() {
     });
   });
 
+  // Tijdformaat knoppen (12h/24h, los van browser/OS-locale)
+  document.querySelectorAll('[data-timeformat]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.timeformat === timeFormat);
+  });
+
+  document.querySelectorAll('[data-timeformat]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const newFormat = btn.dataset.timeformat;
+      await chrome.storage.local.set({ timeFormat: newFormat });
+      document.querySelectorAll('[data-timeformat]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      showSaved('Time format');
+    });
+  });
+
   // Notificaties toggle
   const toggleNotifications = document.getElementById('toggleNotifications');
 
@@ -405,18 +421,6 @@ async function initSettings() {
     await chrome.storage.local.set({ notificationsEnabled: newVal });
     applyNotifEnabled(newVal);
     showSaved('Notifications');
-  });
-
-  // Hide LADD aircraft toggle (default off)
-  const { hideLadd = false } = await chrome.storage.local.get('hideLadd');
-  const toggleHideLadd = document.getElementById('toggleHideLadd');
-  toggleHideLadd.className = `alert-toggle ${hideLadd ? 'on' : ''}`;
-  toggleHideLadd.addEventListener('click', async () => {
-    const { hideLadd: cur = false } = await chrome.storage.local.get('hideLadd');
-    const newVal = !cur;
-    await chrome.storage.local.set({ hideLadd: newVal });
-    toggleHideLadd.className = `alert-toggle ${newVal ? 'on' : ''}`;
-    showSaved('LADD filter');
   });
 
   // Geluid knoppen
@@ -554,13 +558,13 @@ async function initSettings() {
   // ── Backup export / import ───────────────────────────────────────────────
 
   const BACKUP_KEYS = [
-    'alerts', 'lat', 'lon', 'radius', 'units',
+    'alerts', 'lat', 'lon', 'radius', 'units', 'timeFormat',
     'notificationsEnabled', 'notifShow',
     'alertSound', 'alertVolume',
     'startupTab', 'lastTab',
     'caughtAircraft', 'caughtAircraftLabels',
     'statsTotalCount', 'statsFirstDetection', 'statsTypeCounts', 'statsAirlineCounts',
-    'historyLimit','hideLadd'
+    'historyLimit'
   ];
 
   document.getElementById('btnExportAlerts').addEventListener('click', async () => {
