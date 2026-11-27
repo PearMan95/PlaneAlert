@@ -283,7 +283,12 @@ body {
 .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
 
 /* ─── PANELS ───────────────────────────────────────────────────────────────── */
-.panels-wrapper { position: relative; flex: 1; min-height: 0; overflow-y: auto; }
+.panels-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 320px;
+  overflow-y: auto; 
+}
 
 /* v1.2.0: overlay is nu scope-beperkt tot de Live tab en zit niet meer "absolute"
    binnen de scrollcontainer (dat dekte alleen de zichtbare hoogte af, niet de
@@ -292,13 +297,14 @@ body {
 .disabled-overlay {
   display: none;
   width: 100%;
-  min-height: 100%;
+  min-height: 320px;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   gap: 10px;
   background: rgba(8, 9, 15, 0.85);
 }
+
 .disabled-overlay.visible     { display: flex; }
 .disabled-overlay-icon        { font-size: 32px; opacity: 0.5; }
 .disabled-overlay-text        { font-size: 13px; font-weight: 600; color: var(--subtext); text-align: center; line-height: 1.7; }
